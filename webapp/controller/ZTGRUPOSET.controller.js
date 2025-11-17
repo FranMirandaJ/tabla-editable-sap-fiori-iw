@@ -178,6 +178,35 @@ sap.ui.define([
         oView.setBusy(false);
         this.onSelectionChange(); // deshabilita botones de acción
       }
+      
+      //funcion para normalizar datos para la tabla editable////////////////////////////////////////////////
+      const normalized = items.map(x => ({
+        _id: x._id,
+        IDSOCIEDAD: x.IDSOCIEDAD,
+        IDCEDI: x.IDCEDI,
+        IDETIQUETA: x.IDETIQUETA,
+        IDVALOR: x.IDVALOR,
+        IDGRUPOET: x.IDGRUPOET,
+        ID: x.ID,
+        INFOAD: x.INFOAD,
+        FECHAREG: x.FECHAREG,
+        HORAREG: x.HORAREG,
+        USUARIOREG: x.USUARIOREG,
+        FECHAULTMOD: x.FECHAULTMOD,
+        HORAULTMOD: x.HORAULTMOD,
+        USUARIOMOD: x.USUARIOMOD,
+        ACTIVO: x.ACTIVO,
+        BORRADO: x.BORRADO,
+        EstadoTxt: x.ACTIVO ? "Activo" : "Inactivo",
+        EstadoUI5: x.ACTIVO ? "Success" : "Error",
+        EstadoIcon: x.ACTIVO ? "sap-icon://sys-enter-2" : "sap-icon://status-negative",
+        EstadoIconColor: x.ACTIVO ? "Positive" : "Negative",
+        RegistroCompleto: `${x.FECHAREG || ''} ${x.HORAREG || ''} (${x.USUARIOREG || 'N/A'})`,
+        ModificacionCompleta: x.FECHAULTMOD
+          ? `${x.FECHAULTMOD} ${x.HORAULTMOD} (${x.USUARIOMOD || 'N/A'})`
+          : "Sin modificaciones"
+      }));
+
     },
 
     onSelectionChange: function () {
@@ -1496,6 +1525,14 @@ sap.ui.define([
       oView.byId("btnPrevPage").setEnabled(this._iCurrentPage > 1);
       oView.byId("btnNextPage").setEnabled(this._iCurrentPage < iTotalPages);
 
+      const oGruposModel = oView.getModel("grupos");
+        aPageItems.forEach((item, idx) => {
+          oGruposModel.setProperty(`/items/${idx}/EditVisible`, false);
+        });
+
+        oView.byId("btnPrevPage").setEnabled(this._iCurrentPage > 1);
+        oView.byId("btnNextPage").setEnabled(this._iCurrentPage < iTotalPages);
+
       if (iTotalItems > 0) {
         oView.byId("txtPageInfo").setText(`Mostrando ${iStartIndex + 1} - ${Math.min(iEndIndex, iTotalItems)} de ${iTotalItems}`);
       } else {
@@ -1922,6 +1959,177 @@ sap.ui.define([
       return `${hh}:${mm}:${ss}`;
     },
 
+    onToggleDetailRow: function (oEvent) {
+    const oTable  = this.byId("tblGrupos");
+    const oButton = oEvent.getSource();
+
+    // 🔴 Antes: getParent().getParent() → eso te regresaba la tabla
+    // ✅ Aquí la fila padre es directamente el parent del botón
+    const oMainItem  = oButton.getParent();          // ColumnListItem
+    const iMainIndex = oTable.indexOfItem(oMainItem);
+
+    // ¿Ya tiene subfila?
+    const oExistingDetail = oMainItem.data("detailItem");
+    if (oExistingDetail) {
+      // Colapsar
+      oTable.removeItem(oExistingDetail);
+      oMainItem.data("detailItem", null);
+      oButton.setIcon("sap-icon://slim-arrow-down");
+      return;
+    }
+
+    // Expandir: crear la subfila
+    const oCtx = oMainItem.getBindingContext("grupos");
+
+    const oDetailItem = new sap.m.ColumnListItem({
+      type: "Inactive",
+      vAlign: "Middle",
+      cells: [
+        // 1) Columna de la flecha (vacía)
+        new sap.m.Text({ text: "" }),
+
+        // 2) Sociedad
+        new sap.m.Input({ value: "{grupos>IDSOCIEDAD}" }),
+
+        // 3) Sucursal (CEDIS)
+        new sap.m.Input({ value: "{grupos>IDCEDI}" }),
+
+        // 4) Etiqueta
+        new sap.m.Input({ value: "{grupos>IDETIQUETA}" }),
+
+        // 5) Valor
+        new sap.m.Input({ value: "{grupos>IDVALOR}" }),
+
+        // 6) Grupo Etiqueta
+        new sap.m.Input({ value: "{grupos>IDGRUPOET}" }),
+
+        // 7) ID
+        new sap.m.Input({ value: "{grupos>ID}" }),
+
+        // 8) Información adicional
+        new sap.m.Input({
+          value: "{grupos>INFOAD}",
+          width: "100%"
+        }),
+
+        // 9) Registro (solo lectura o vacío)
+        new sap.m.Text({ text: "" }),
+
+        // 10) Última modificación (vacío)
+        new sap.m.Text({ text: "" }),
+
+        // 11) Estado → aquí ponemos los botones
+        new sap.m.HBox({
+          justifyContent: "End",
+          items: [
+            new sap.m.Button({
+              text: "Guardar",
+              type: "Emphasized",
+              press: this.onSaveInlineFromDetail.bind(this)
+            }),
+            new sap.m.Button({
+              text: "Cancelar",
+              type: "Transparent",
+              press: this.onCancelInlineFromDetail.bind(this)
+            })
+          ]
+        })
+      ]
+    });
+
+    // 🔗 Mismo contexto de datos que la fila padre
+    oDetailItem.setBindingContext(oCtx, "grupos");
+
+    // Insertar justo debajo de la fila principal
+    oTable.insertItem(oDetailItem, iMainIndex + 1);
+
+    // Guardar referencia para poder eliminarla luego
+    oMainItem.data("detailItem", oDetailItem);
+
+    // Cambiar icono a “colapsar”
+    oButton.setIcon("sap-icon://slim-arrow-up");
+  },
+
+  onSaveInlineFromDetail: async function (oEvent) {
+  const oCtx = oEvent.getSource().getBindingContext("grupos");
+  if (!oCtx) { return; }
+
+  const oRec = oCtx.getObject();
+
+  // Aquí puedes reusar el payload de onSaveUpdate:
+  const url = this._getApiParams("UpdateOne");
+
+  const payload = {
+    IDSOCIEDAD: oRec.IDSOCIEDAD,
+    IDCEDI: oRec.IDCEDI,
+    IDETIQUETA: oRec.IDETIQUETA,
+    IDVALOR: oRec.IDVALOR,
+    IDGRUPOET: oRec.IDGRUPOET,
+    ID: oRec.ID,
+    data: {
+      IDSOCIEDAD: oRec.IDSOCIEDAD,
+      IDCEDI: oRec.IDCEDI,
+      IDETIQUETA: oRec.IDETIQUETA,
+      IDVALOR: oRec.IDVALOR,
+      IDGRUPOET: oRec.IDGRUPOET,
+      ID: oRec.ID,
+      INFOAD: oRec.INFOAD,
+      ACTIVO: oRec.ACTIVO !== false,
+      BORRADO: oRec.BORRADO || false
+    }
+  };
+
+  this.getView().setBusy(true);
+  try {
+    const res = await fetch(url, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload)
+    });
+
+    const json = await res.json().catch(() => ({}));
+    if (!res.ok) {
+      if (res.status === 409) {
+        MessageBox.error("Ya existe un registro con esos datos. No se puede actualizar.");
+        return;
+      }
+      throw new Error("HTTP " + res.status + (json.messageUSR ? " - " + json.messageUSR : ""));
+    }
+
+    MessageToast.show("Registro actualizado correctamente.");
+    await this._loadData();  // recargar tabla
+
+  } catch (e) {
+    console.error(e);
+    MessageBox.error("Error al actualizar: " + e.message);
+  } finally {
+    this.getView().setBusy(false);
+  }
+},
+
+// Cancelar → solo cerrar la subfila
+onCancelInlineFromDetail: function (oEvent) {
+  const oButton = oEvent.getSource();
+  const oDetailItem = oButton.getParent().getParent(); // HBox -> cell -> ColumnListItem
+  const oTable = this.byId("tblGrupos");
+
+  const iDetailIndex = oTable.indexOfItem(oDetailItem);
+  const oMainItem = oTable.getItems()[iDetailIndex - 1];
+
+  // quitar subfila
+  oTable.removeItem(oDetailItem);
+  oMainItem.data("detailItem", null);
+
+  // volver a dejar la flecha “cerrar”
+  const oArrowBtn = oMainItem.getCells()[0];
+  oArrowBtn.setIcon("sap-icon://slim-arrow-down");
+
+  // si quieres recuperar valores originales:
+  // this._loadData();
+},
+
+
+    
 
   });
 });
