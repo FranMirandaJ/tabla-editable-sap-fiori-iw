@@ -450,7 +450,7 @@ sap.ui.define([
         });
 
         if (!res.ok) {
-          if (res.status === 409 ) {
+          if (res.status === 409) {
             MessageBox.error("Ya existe un registro con estos datos. No se puede crear un duplicado.");
             return;
           }
@@ -2107,29 +2107,36 @@ sap.ui.define([
   }
 },
 
-// Cancelar → solo cerrar la subfila
-onCancelInlineFromDetail: function (oEvent) {
-  const oButton = oEvent.getSource();
-  const oDetailItem = oButton.getParent().getParent(); // HBox -> cell -> ColumnListItem
-  const oTable = this.byId("tblGrupos");
+  // Cancelar → solo cerrar la subfila
+  onCancelInlineFromDetail: function (oEvent) {
+    const oButton = oEvent.getSource();
+    const oDetailItem = oButton.getParent().getParent(); // HBox -> cell -> ColumnListItem
+    const oTable = this.byId("tblGrupos");
 
-  const iDetailIndex = oTable.indexOfItem(oDetailItem);
-  const oMainItem = oTable.getItems()[iDetailIndex - 1];
+    const iDetailIndex = oTable.indexOfItem(oDetailItem);
+    const oMainItem = oTable.getItems()[iDetailIndex - 1];
 
-  // quitar subfila
-  oTable.removeItem(oDetailItem);
-  oMainItem.data("detailItem", null);
+    // quitar subfila
+    oTable.removeItem(oDetailItem);
+    oMainItem.data("detailItem", null);
 
-  // volver a dejar la flecha “cerrar”
-  const oArrowBtn = oMainItem.getCells()[0];
-  oArrowBtn.setIcon("sap-icon://slim-arrow-down");
+    // volver a dejar la flecha “cerrar”
+    const oArrowBtn = oMainItem.getCells()[0];
+    oArrowBtn.setIcon("sap-icon://slim-arrow-down");
 
-  // si quieres recuperar valores originales:
-  // this._loadData();
-},
+    // si quieres recuperar valores originales:
+    // this._loadData();
+  },
 
+  onColumnResize: function (oEvent) {
+      const oColumn = oEvent.getParameter("column");
+      const sWidth = oEvent.getParameter("width");
+      console.log(`Columna redimensionada: ${oColumn.getId()}, Ancho: ${sWidth}`);
 
-    
+      // Opcional: Guardar en localStorage para persistencia
+      // this._saveColumnWidth(oColumn.getId(), sWidth);
+  }
+
 
   });
 });
