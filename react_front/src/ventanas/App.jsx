@@ -227,7 +227,7 @@ export default function App() {
       const url = `${URL_BASE}/api/security/gruposet/crud?ProcessType=DeleteHard&DBServer=${dbConnection}`;
       await axios.post(url, payload);
 
-      alert("🟡 Registro elimina");
+      alert("🟡 Registro eliminado con éxito");
       // 🔄 Refrescar tabla
       fetchData();
 
@@ -312,14 +312,14 @@ export default function App() {
           >
             Crear
           </Button>
-          <Button
+          {/* <Button
             className="btn-editar"
             icon="edit"
             onClick={handleEditarClick}
-            disabled={!selectedRow}
+            disabled={true}
           >
             Editar
-          </Button>
+          </Button> */}
           <Button
             className="btn-eliminar"
             icon="delete"
@@ -435,7 +435,7 @@ export default function App() {
         refetchData={fetchData}
       />
 
-      {/* 🔹 Ventana de configuración (nueva) */}
+      {/* 🔹 Ventana de configuración para cambiar server de BD */}
       {showConfig && (
         <Dialog
           headerText="Configuración"
