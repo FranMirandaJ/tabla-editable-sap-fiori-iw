@@ -211,12 +211,27 @@ const ModalCrear = ({ isModalOpen, handleCloseModal, dbConnection }) => {
         // }
     };
 
+    const limpiarFormulario = () => {
+        setSociedad("");
+        setCedis("");
+        setEtiqueta("");
+        setValor("");
+        setGrupoET("");
+        setid("");
+        setInfoAdicional("");
+    };
+
+    const handleCancelar = () => {
+        limpiarFormulario();
+        handleCloseModal();
+    };
+
     return (
         <>
             <Dialog
                 stretch={false}
                 open={isModalOpen}
-                onAfterClose={handleCloseModal}
+                onAfterClose={handleCancelar}
                 headerText="Registro"
                 style={{
                     width: "600px",  // o el ancho que prefieras
@@ -234,7 +249,7 @@ const ModalCrear = ({ isModalOpen, handleCloseModal, dbConnection }) => {
                                 >
                                     Guardar cambios
                                 </Button>
-                                <Button design="Transparent" onClick={handleCloseModal}>
+                                <Button design="Transparent" onClick={handleCancelar}>
                                     Cancelar
                                 </Button>
                             </>
@@ -257,7 +272,7 @@ const ModalCrear = ({ isModalOpen, handleCloseModal, dbConnection }) => {
                             <ComboBox
                                 className="modal-combobox"
                                 onChange={(e) => {
-                                    const value = e.detail.value;
+                                    const value = e.target.value;
                                     setSociedad(value);
                                 }}
                                 placeholder="Selecciona una sociedad"
@@ -276,7 +291,7 @@ const ModalCrear = ({ isModalOpen, handleCloseModal, dbConnection }) => {
                             <ComboBox
                                 className="modal-combobox"
                                 onChange={(e) => {
-                                    const value = e.detail.value;
+                                    const value = e.target.value;
                                     setCedis(value);
                                 }}
                                 placeholder="Selecciona un CEDI"
@@ -295,7 +310,7 @@ const ModalCrear = ({ isModalOpen, handleCloseModal, dbConnection }) => {
                             <ComboBox
                                 className="modal-combobox"
                                 onChange={(e) => {
-                                    const value = e.detail.value;
+                                    const value = e.target.value;
                                     setEtiqueta(value);
                                 }}
                                 placeholder="Selecciona una etiqueta"
@@ -314,7 +329,7 @@ const ModalCrear = ({ isModalOpen, handleCloseModal, dbConnection }) => {
                             <ComboBox
                                 className="modal-combobox"
                                 onChange={(e) => {
-                                    const value = e.detail.value;
+                                    const value = e.target.value;
                                     setValor(value);
                                 }}
                                 placeholder="Seleccione un valor"
@@ -336,6 +351,7 @@ const ModalCrear = ({ isModalOpen, handleCloseModal, dbConnection }) => {
                                     type="Text"
                                     valueState="None"
                                     disabled={true}
+                                //value=""
                                 />
                                 <Button
                                     icon="edit"
@@ -372,9 +388,13 @@ const ModalCrear = ({ isModalOpen, handleCloseModal, dbConnection }) => {
             </Dialog>
             <ModalEditGrupoET
                 isModalOpen={isModalEditGrupoETOpen}
-                handleCloseModal={() => setIsModalEditGrupoETOpen(false)}
+                handleCloseModal={() => {
+                    setIsModalEditGrupoETOpen(false);
+                }}
                 setGrupoET={setGrupoET}
                 dbConnection={dbConnection}
+                etiquetas={etiquetasCatalog}
+                valores={valoresCatalog}
             />
         </>
     );
