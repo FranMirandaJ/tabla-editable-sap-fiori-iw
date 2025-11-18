@@ -15,8 +15,9 @@ import {
 import ModalEditGrupoET from "./ModalEditGrupoET.jsx";
 
 // Constantes para consultar el backend del equipo de miguellopez corriendo en localhost
-const URL_BASE_BACK_MIGUEL = "http://localhost:3034/api/cat/crudLabelsValues";
-const URL_BASE_BACK_NOSOTROS = "https://app-restful-sap-cds.onrender.com";
+const URL_BASE_BACKEND_MIGUEL = "http://localhost:3034/api/cat/crudLabelsValues";
+
+const URL_BASE_BACKEND_CINNALOVERS = "https://app-restful-sap-cds.onrender.com";
 const LOGGED_USER = "FMIRADAJ";
 
 
@@ -45,14 +46,14 @@ const ModalCrear = ({ isModalOpen, handleCloseModal, dbConnection, refetchData }
     // console.log("cedis", cedisCatalog);
     // console.log("etiquetas", etiquetasCatalog);
     // console.log("valores", valoresCatalog);
-    
+
     const [isModalEditGrupoETOpen, setIsModalEditGrupoETOpen] = useState(false);
 
     useEffect(() => {
         const fetchCatalogos = async () => {
             if (!isModalOpen) return;
             try {
-                const url = `${URL_BASE_BACK_MIGUEL}?ProcessType=GetAll&LoggedUser=MIGUELLOPEZ&DBServer=${dbConnection}`;
+                const url = `${URL_BASE_BACKEND_MIGUEL}?ProcessType=GetAll&LoggedUser=MIGUELLOPEZ&DBServer=${dbConnection}`;
                 const response = await fetch(url, {
                     method: "POST",
                     headers: { "Content-Type": "application/json" },
@@ -171,7 +172,7 @@ const ModalCrear = ({ isModalOpen, handleCloseModal, dbConnection, refetchData }
             };
 
             const processType = "Create";
-            const url = `${URL_BASE_BACK_NOSOTROS}/api/security/gruposet/crud?ProcessType=${processType}&DBServer=${dbConnection}&LoggedUser=${LOGGED_USER}`;
+            const url = `${URL_BASE_BACKEND_CINNALOVERS}/api/security/gruposet/crud?ProcessType=${processType}&DBServer=${dbConnection}&LoggedUser=${LOGGED_USER}`;
 
             console.log(`📤 Enviando ${processType} a:`, url);
             console.log("📦 Datos:", registro);
@@ -187,14 +188,20 @@ const ModalCrear = ({ isModalOpen, handleCloseModal, dbConnection, refetchData }
 
                 refetchData();
             } else {
-                alert(`⚠️ Error al ${isEditing ? "actualizar" : "crear"} el registro`);
+                alert(`⚠️ Error al crear el registro`);
             }
 
             limpiarFormulario();
             handleCloseModal();
         } catch (error) {
-            console.error("❌ Error al guardar:", error);
-            alert("Error al guardar el registro: " + error.message);
+            if (error.status === 409) {
+                alert("❌ Ya existe un registro con esos datos. No se puede actualizar.");
+            } else {
+                console.error("❌ Error al guardar:", error);
+                alert("Error al guardar el registro: " + error.message);
+            }
+            //limpiarFormulario();
+            //handleCloseModal();
         }
     };
 

@@ -229,24 +229,7 @@ export default function App() {
 
       alert("🟡 Registro elimina");
       // 🔄 Refrescar tabla
-      const res = await axios.post(
-        `${URL_BASE}/api/security/gruposet/crud?ProcessType=GetAll&DBServer=${dbConnection}`,
-        {}
-      );
-      const records =
-        res.data?.data?.[0]?.dataRes?.map((item) => ({
-          sociedad: item.IDSOCIEDAD,
-          sucursal: item.IDCEDI,
-          etiqueta: item.IDETIQUETA,
-          valor: item.IDVALOR,
-          idgroup: item.IDGRUPOET,
-          idg: item.ID,
-          info: item.INFOAD,
-          fecha: item.FECHAREG,
-          hora: item.HORAREG,
-          estado: item.ACTIVO ? "Activo" : "Inactivo",
-        })) || [];
-      setData(records);
+      fetchData();
 
     } catch (err) {
       console.error("Error al eliminar :", err);
