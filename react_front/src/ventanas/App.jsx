@@ -41,6 +41,8 @@ import "@ui5/webcomponents-icons/dist/database.js";
 // Importacion de iconos
 import "@ui5/webcomponents-icons/dist/accept.js";
 import "@ui5/webcomponents-icons/dist/decline.js";
+import "@ui5/webcomponents-icons/dist/navigation-down-arrow.js";
+import "@ui5/webcomponents-icons/dist/navigation-up-arrow.js";
 
 const URL_BASE = "https://app-restful-sap-cds.onrender.com"; // http://localhost:4004
 
@@ -51,6 +53,7 @@ export default function App() {
   const [loading, setLoading] = useState(true);
   const [selectedRow, setSelectedRow] = useState(null);
   const [isEditing, setIsEditing] = useState(false);
+  const [expandedRows, setExpandedRows] = useState(new Set());
 
   // --- Estados añadidos del menú ---
   const [isNavOpen, setIsNavOpen] = useState(false);
@@ -107,6 +110,7 @@ export default function App() {
   }, [dbConnection]);
 
   const columns = [
+    { Header: "", accessor: "expand" },
     { Header: "Sociedad", accessor: "sociedad" },
     { Header: "Sucursal (CEDIS)", accessor: "sucursal" },
     { Header: "Etiqueta", accessor: "etiqueta" },
@@ -249,6 +253,20 @@ export default function App() {
     }
   };
 
+  const handleToggleExpand = (rowId) => {
+    // Detener la propagación para no activar la selección de fila
+    // e.stopPropagation();
+    setExpandedRows(prevExpanded => {
+      const newExpanded = new Set(prevExpanded);
+      if (newExpanded.has(rowId)) {
+        newExpanded.delete(rowId);
+      } else {
+        newExpanded.add(rowId);
+      }
+      return newExpanded;
+    });
+  };
+
   return (
     <>
       {/* 🔹 ShellBar con menú hamburguesa */}
@@ -370,56 +388,60 @@ export default function App() {
                 if (r) setSelectedRow(r);
               }}
             >
-              {data.map((row, index) => (
-                <TableRow
-                  key={index}
-                  selected={selectedRow === row}
-                  onClick={() => handleRowClick(row)}
-                >
-                  <TableCell>
-                    <span>{row.sociedad}</span>
-                  </TableCell>
-                  <TableCell>
-                    <span>{row.sucursal}</span>
-                  </TableCell>
-                  <TableCell>
-                    <span>{row.etiqueta}</span>
-                  </TableCell>
-                  <TableCell>
-                    <span>{row.valor}</span>
-                  </TableCell>
-                  <TableCell>
-                    <span>{row.idgroup}</span>
-                  </TableCell>
-                  <TableCell>
-                    <span>{row.idg}</span>
-                  </TableCell>
-                  <TableCell>
-                    <span>{row.info}</span>
-                  </TableCell>
-                  <TableCell>
-                    <span>{row.registro}</span>
-                  </TableCell>
-                  <TableCell>
-                    <span>{row.ultMod}</span>
-                  </TableCell>
-                  <TableCell>
-                    {row.estado ? (
-                      <Icon
-                        name="accept"
-                        style={{ color: "green" }}
-                        title="Activo"
-                      />
-                    ) : (
-                      <Icon
-                        name="decline"
-                        style={{ color: "red" }}
-                        title="Inactivo"
-                      />
+              {data.map((row) => {
+                const isExpanded = expandedRows.has(row.idg);
+                return (
+                  <React.Fragment key={row.idg}>
+                    <TableRow
+                      selected={selectedRow === row}
+                      onClick={() => handleRowClick(row)}
+                    >
+                      <TableCell>
+                        <Button
+                          icon={isExpanded ? "navigation-up-arrow" : "navigation-down-arrow"}
+                          design="Transparent"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleToggleExpand(row.idg);
+                          }}
+                        />
+                      </TableCell>
+                      <TableCell><span>{row.sociedad}</span></TableCell>
+                      <TableCell><span>{row.sucursal}</span></TableCell>
+                      <TableCell><span>{row.etiqueta}</span></TableCell>
+                      <TableCell><span>{row.valor}</span></TableCell>
+                      <TableCell><span>{row.idgroup}</span></TableCell>
+                      <TableCell><span>{row.idg}</span></TableCell>
+                      <TableCell><span>{row.info}</span></TableCell>
+                      <TableCell><span>{row.registro}</span></TableCell>
+                      <TableCell><span>{row.ultMod}</span></TableCell>
+                      <TableCell>
+                        {row.estado ? (
+                          <Icon name="accept" style={{ color: "green" }} title="Activo" />
+                        ) : (
+                          <Icon name="decline" style={{ color: "red" }} title="Inactivo" />
+                        )}
+                      </TableCell>
+                    </TableRow>
+                    {isExpanded && (
+                      <TableRow>
+                        {/* Celdas vacías para la fila expandida, incluyendo la del botón */}
+                        <TableCell></TableCell>
+                        <TableCell></TableCell>
+                        <TableCell></TableCell>
+                        <TableCell></TableCell>
+                        <TableCell></TableCell>
+                        <TableCell></TableCell>
+                        <TableCell></TableCell>
+                        <TableCell></TableCell>
+                        <TableCell></TableCell>
+                        <TableCell></TableCell>
+                        <TableCell></TableCell>
+                      </TableRow>
                     )}
-                  </TableCell>
-                </TableRow>
-              ))}
+                  </React.Fragment>
+                );
+              })}
             </Table>
           ) : (
             <p className="no-data-msg">No hay datos disponibles</p>
