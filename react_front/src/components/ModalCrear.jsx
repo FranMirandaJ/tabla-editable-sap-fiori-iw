@@ -26,6 +26,11 @@ const ModalCrear = ({ isModalOpen, handleCloseModal, dbConnection }) => {
     const [etiquetasCatalog, setEtiquetasCatalog] = useState([]);
     const [valoresCatalog, setValoresCatalog] = useState([]);
 
+    // Estados para los catálogos filtrados
+    const [filteredCedisCatalog, setFilteredCedisCatalog] = useState([]);
+    const [filteredEtiquetasCatalog, setFilteredEtiquetasCatalog] = useState([]);
+    const [filteredValoresCatalog, setFilteredValoresCatalog] = useState([]);
+
     // Estados para los campos del formulario
     const [sociedad, setSociedad] = useState("");
     const [cedis, setCedis] = useState("");
@@ -35,8 +40,11 @@ const ModalCrear = ({ isModalOpen, handleCloseModal, dbConnection }) => {
     const [id, setid] = useState("");
     const [infoAdicional, setInfoAdicional] = useState("");
 
-    console.log(sociedadesCatalog, cedisCatalog, etiquetasCatalog, valoresCatalog);
-
+    console.log("sociedades",sociedadesCatalog);
+    console.log("cedis", cedisCatalog);
+    console.log("etiquetas", etiquetasCatalog);
+    console.log("valores", valoresCatalog);
+    
     const [isModalEditGrupoETOpen, setIsModalEditGrupoETOpen] = useState(false);
 
     useEffect(() => {
@@ -85,6 +93,7 @@ const ModalCrear = ({ isModalOpen, handleCloseModal, dbConnection }) => {
 
                     // CEDIS
                     if (
+                        item.IDSOCIEDAD &&
                         item.IDCEDI &&
                         !cedis.some((c) => c.key === item.IDCEDI && c.parentSoc === item.IDSOCIEDAD)
                     ) {
@@ -98,7 +107,7 @@ const ModalCrear = ({ isModalOpen, handleCloseModal, dbConnection }) => {
                     // ETIQUETAS
                     // Guardar etiqueta COMPLETA en etiquetasAll
                     // ETIQUETAS (IDS reales + conservar COLECCION/SECCION para filtros)
-                    if (item.IDETIQUETA && !etiquetas.some((e) => e.key === item.IDETIQUETA)) {
+                    if (item.IDETIQUETA && item.IDSOCIEDAD && item.IDCEDI && !etiquetas.some((e) => e.key === item.IDETIQUETA)) {
                         etiquetas.push({
                             key: item.IDETIQUETA,
                             text: item.IDETIQUETA,
@@ -219,6 +228,10 @@ const ModalCrear = ({ isModalOpen, handleCloseModal, dbConnection }) => {
         setGrupoET("");
         setid("");
         setInfoAdicional("");
+        // Limpiar también los catálogos filtrados
+        setFilteredCedisCatalog([]);
+        setFilteredEtiquetasCatalog([]);
+        setFilteredValoresCatalog([]);
     };
 
     const handleCancelar = () => {
@@ -271,17 +284,26 @@ const ModalCrear = ({ isModalOpen, handleCloseModal, dbConnection }) => {
                             <Label required>Sociedad</Label>
                             <ComboBox
                                 className="modal-combobox"
-                                onChange={(e) => {
-                                    const value = e.target.value;
-                                    setSociedad(value);
+                                onSelectionChange={(e) => {
+                                    const selectedItem = e.detail.item;
+                                    const selectedKey = selectedItem?.dataset.key;
+                                    setSociedad(selectedKey);
+                                    // Limpiar selecciones dependientes
+                                    setCedis("");
+                                    setEtiqueta("");
+                                    setValor("");
+                                    setFilteredEtiquetasCatalog([]);
+                                    setFilteredValoresCatalog([]);
+                                    // Filtrar CEDIS
+                                    const filtered = cedisCatalog.filter(c => c.parentSoc.toString() === selectedKey);
+                                    setFilteredCedisCatalog(filtered);
                                 }}
                                 placeholder="Selecciona una sociedad"
-                                value={sociedad}
                                 filter="Contains"
                                 style={{ width: '400px' }}
                             >
                                 {sociedadesCatalog.map(item =>
-                                    <ComboBoxItem key={item.key} text={item.text} />
+                                    <ComboBoxItem key={item.key} data-key={item.key} text={item.text} />
                                 )}
                             </ComboBox>
                         </div>
@@ -290,17 +312,25 @@ const ModalCrear = ({ isModalOpen, handleCloseModal, dbConnection }) => {
                             <Label required>CEDI</Label>
                             <ComboBox
                                 className="modal-combobox"
-                                onChange={(e) => {
-                                    const value = e.target.value;
-                                    setCedis(value);
+                                disabled={!sociedad}
+                                onSelectionChange={(e) => {
+                                    const selectedItem = e.detail.item;
+                                    const selectedKey = selectedItem?.dataset.key;
+                                    setCedis(selectedKey);
+                                    // Limpiar selecciones dependientes
+                                    setEtiqueta("");
+                                    setValor("");
+                                    setFilteredValoresCatalog([]);
+                                    // Filtrar Etiquetas
+                                    const filtered = etiquetasCatalog.filter(et => et.IDSOCIEDAD && et.IDCEDI && et.IDSOCIEDAD.toString() === sociedad && et.IDCEDI.toString() === selectedKey);
+                                    setFilteredEtiquetasCatalog(filtered);
                                 }}
                                 placeholder="Selecciona un CEDI"
-                                value={cedis}
                                 filter="Contains"
                                 style={{ width: '400px' }}
                             >
-                                {cedisCatalog.map(item =>
-                                    <ComboBoxItem key={item.key} text={item.text} />
+                                {filteredCedisCatalog.map(item =>
+                                    <ComboBoxItem key={item.key} data-key={item.key} text={item.text} />
                                 )}
                             </ComboBox>
                         </div>
@@ -309,17 +339,23 @@ const ModalCrear = ({ isModalOpen, handleCloseModal, dbConnection }) => {
                             <Label required>Etiqueta</Label>
                             <ComboBox
                                 className="modal-combobox"
-                                onChange={(e) => {
-                                    const value = e.target.value;
-                                    setEtiqueta(value);
+                                disabled={!cedis}
+                                onSelectionChange={(e) => {
+                                    const selectedItem = e.detail.item;
+                                    const selectedKey = selectedItem?.dataset.key;
+                                    setEtiqueta(selectedKey);
+                                    // Limpiar selección dependiente
+                                    setValor("");
+                                    // Filtrar Valores
+                                    const filtered = valoresCatalog.filter(v => v.parentEtiqueta === selectedKey);
+                                    setFilteredValoresCatalog(filtered);
                                 }}
                                 placeholder="Selecciona una etiqueta"
-                                value={etiqueta}
                                 filter="Contains"
                                 style={{ width: '400px' }}
                             >
-                                {etiquetasCatalog.map(item =>
-                                    <ComboBoxItem key={item.key} text={item.IDETIQUETA} />
+                                {filteredEtiquetasCatalog.map(item =>
+                                    <ComboBoxItem key={item.key} data-key={item.key} text={item.text} />
                                 )}
                             </ComboBox>
                         </div>
@@ -328,17 +364,18 @@ const ModalCrear = ({ isModalOpen, handleCloseModal, dbConnection }) => {
                             <Label required>Valor</Label>
                             <ComboBox
                                 className="modal-combobox"
-                                onChange={(e) => {
-                                    const value = e.target.value;
-                                    setValor(value);
+                                disabled={!etiqueta}
+                                onSelectionChange={(e) => {
+                                    const selectedItem = e.detail.item;
+                                    const selectedKey = selectedItem?.dataset.key;
+                                    setValor(selectedKey);
                                 }}
                                 placeholder="Seleccione un valor"
-                                value={valor}
                                 filter="Contains"
                                 style={{ width: '400px' }}
                             >
-                                {valoresCatalog.map(item =>
-                                    <ComboBoxItem key={item.IDVALOR} text={item.IDVALOR} />
+                                {filteredValoresCatalog.map(item =>
+                                    <ComboBoxItem key={item.key} data-key={item.key} text={item.text} />
                                 )}
                             </ComboBox>
                         </div>
