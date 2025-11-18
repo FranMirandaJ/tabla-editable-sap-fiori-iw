@@ -95,7 +95,7 @@ export default function App() {
             idg: item.ID,
             info: item.INFOAD,
             registro: `${item.FECHAREG} ${item.HORAREG} (${item.USUARIOREG})`,
-            ultMod:  !item.FECHAULTMOD ? "Sin modificaciones" : `${item.FECHAULTMOD} ${item.HORAULTMOD} (${item.USUARIOMOD})`,
+            ultMod: !item.FECHAULTMOD ? "Sin modificaciones" : `${item.FECHAULTMOD} ${item.HORAULTMOD} (${item.USUARIOMOD})`,
             estado: item.ACTIVO,
           })) || [];
 
@@ -455,35 +455,6 @@ export default function App() {
           {loading ? (
             <p className="loading-msg">Cargando datos...</p>
           ) : data.length > 0 ? (
-            // <AnalyticalTable
-            //   data={data}
-            //   columns={columns}
-            //   className="ui5-table-root"
-            //   style={{
-            //     width: "100%",
-            //     height: "auto",
-            //     backgroundColor: "#1e1e1e",
-            //     color: "white",
-            //     borderRadius: "8px",
-            //     maxHeight: "600px",
-            //     overflowY: "auto",
-            //   }}
-            //   onRowClick={(ev) => {
-            //     const r = ev?.row?.original ?? ev?.detail?.row?.original ?? null;
-            //     if (r) setSelectedRow(r);
-            //   }}
-            //   reactTableOptions={{
-            //     getRowProps: (row) => ({
-            //       style: row?.original?.borrado
-            //         ? {
-            //           opacity: 0.45,
-            //           filter: "grayscale(20%)",
-            //           backgroundColor: "#282828"
-            //         }
-            //         : {}
-            //     })
-            //   }}
-            // />
             <Table
               headerRow={
                 <TableHeaderRow sticky>
@@ -492,6 +463,10 @@ export default function App() {
                   ))}
                 </TableHeaderRow>
               }
+              onRowClick={(ev) => {
+                const r = ev?.row?.original ?? ev?.detail?.row?.original ?? null;
+                if (r) setSelectedRow(r);
+              }}
             >
               {data.map((row, index) => (
                 <TableRow key={index}>
