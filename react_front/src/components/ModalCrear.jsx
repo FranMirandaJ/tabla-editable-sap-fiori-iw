@@ -284,6 +284,7 @@ const ModalCrear = ({ isModalOpen, handleCloseModal, dbConnection }) => {
                             <Label required>Sociedad</Label>
                             <ComboBox
                                 className="modal-combobox"
+                                value={sociedad ? `Sociedad ${sociedad}` : ""}
                                 onSelectionChange={(e) => {
                                     const selectedItem = e.detail.item;
                                     const selectedKey = selectedItem?.dataset.key;
@@ -292,6 +293,7 @@ const ModalCrear = ({ isModalOpen, handleCloseModal, dbConnection }) => {
                                     setCedis("");
                                     setEtiqueta("");
                                     setValor("");
+                                    setFilteredCedisCatalog([]);
                                     setFilteredEtiquetasCatalog([]);
                                     setFilteredValoresCatalog([]);
                                     // Filtrar CEDIS
@@ -312,6 +314,7 @@ const ModalCrear = ({ isModalOpen, handleCloseModal, dbConnection }) => {
                             <Label required>CEDI</Label>
                             <ComboBox
                                 className="modal-combobox"
+                                value={cedis ? `Cedi ${cedis}` : ""}
                                 disabled={!sociedad}
                                 onSelectionChange={(e) => {
                                     const selectedItem = e.detail.item;
@@ -320,6 +323,7 @@ const ModalCrear = ({ isModalOpen, handleCloseModal, dbConnection }) => {
                                     // Limpiar selecciones dependientes
                                     setEtiqueta("");
                                     setValor("");
+                                    setFilteredEtiquetasCatalog([]);
                                     setFilteredValoresCatalog([]);
                                     // Filtrar Etiquetas
                                     const filtered = etiquetasCatalog.filter(et => et.IDSOCIEDAD && et.IDCEDI && et.IDSOCIEDAD.toString() === sociedad && et.IDCEDI.toString() === selectedKey);
@@ -339,6 +343,7 @@ const ModalCrear = ({ isModalOpen, handleCloseModal, dbConnection }) => {
                             <Label required>Etiqueta</Label>
                             <ComboBox
                                 className="modal-combobox"
+                                value={etiqueta}
                                 disabled={!cedis}
                                 onSelectionChange={(e) => {
                                     const selectedItem = e.detail.item;
@@ -346,6 +351,7 @@ const ModalCrear = ({ isModalOpen, handleCloseModal, dbConnection }) => {
                                     setEtiqueta(selectedKey);
                                     // Limpiar selección dependiente
                                     setValor("");
+                                    setFilteredValoresCatalog([]);
                                     // Filtrar Valores
                                     const filtered = valoresCatalog.filter(v => v.parentEtiqueta === selectedKey);
                                     setFilteredValoresCatalog(filtered);
@@ -364,11 +370,13 @@ const ModalCrear = ({ isModalOpen, handleCloseModal, dbConnection }) => {
                             <Label required>Valor</Label>
                             <ComboBox
                                 className="modal-combobox"
+                                value={valor}
                                 disabled={!etiqueta}
                                 onSelectionChange={(e) => {
                                     const selectedItem = e.detail.item;
                                     const selectedKey = selectedItem?.dataset.key;
                                     setValor(selectedKey);
+                                    // No hay más campos que limpiar/filtrar
                                 }}
                                 placeholder="Seleccione un valor"
                                 filter="Contains"
