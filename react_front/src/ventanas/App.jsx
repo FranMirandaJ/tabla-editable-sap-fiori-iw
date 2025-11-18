@@ -17,12 +17,30 @@ import {
   SideNavigation,
   SideNavigationItem,
   SideNavigationSubItem,
-  Switch
+  Switch,
+  Table,
+  TableRow,
+  TableCell,
+  TableRowAction,
+  TableRowActionNavigation,
+  TableHeaderRow,
+  TableHeaderCell,
+  TableHeaderCellActionAI,
+  TableGrowing,
+  TableSelection,
+  TableVirtualizer,
+  TableSelectionMulti,
+  TableSelectionSingle,
+  Icon
 } from "@ui5/webcomponents-react";
 import "@ui5/webcomponents-icons/dist/menu.js";
 import "@ui5/webcomponents-icons/dist/home.js";
 import "@ui5/webcomponents-icons/dist/settings.js";
 import "@ui5/webcomponents-icons/dist/database.js";
+// Importacion de iconos
+import "@ui5/webcomponents-icons/dist/accept.js";
+import "@ui5/webcomponents-icons/dist/decline.js";
+const URL_BASE = "https://app-restful-sap-cds.onrender.com"; // http://localhost:4004
 
 export default function App() {
   // --- Estados originales ---
@@ -61,9 +79,11 @@ export default function App() {
       setLoading(true);
       try {
         const res = await axios.post(
-          `http://localhost:4004/api/security/gruposet/crud?ProcessType=GetAll&DBServer=${dbConnection}`,
+          `${URL_BASE}/api/security/gruposet/crud?ProcessType=GetAll&DBServer=${dbConnection}`,
           {}
         );
+
+        // console.log("SERVER RESPONSE ==============> ",res.data?.data?.[0]?.dataRes);
 
         const records =
           res.data?.data?.[0]?.dataRes?.map((item) => ({
@@ -74,10 +94,12 @@ export default function App() {
             idgroup: item.IDGRUPOET,
             idg: item.ID,
             info: item.INFOAD,
-            fecha: item.FECHAREG,
-            hora: item.HORAREG,
-            estado: item.ACTIVO ? "Activo" : "Inactivo",
+            registro: `${item.FECHAREG} ${item.HORAREG} (${item.USUARIOREG})`,
+            ultMod:  !item.FECHAULTMOD ? "Sin modificaciones" : `${item.FECHAULTMOD} ${item.HORAULTMOD} (${item.USUARIOMOD})`,
+            estado: item.ACTIVO,
           })) || [];
+
+        console.log("Datos obtenidos:", records);
 
         setData(records);
       } catch (error) {
@@ -95,11 +117,11 @@ export default function App() {
     { Header: "Sucursal (CEDIS)", accessor: "sucursal" },
     { Header: "Etiqueta", accessor: "etiqueta" },
     { Header: "Valor", accessor: "valor" },
-    { Header: "IDGRUPOET", accessor: "idgroup" },
+    { Header: "Grupo Etiqueta", accessor: "idgroup" },
     { Header: "ID", accessor: "idg" },
-    { Header: "Informacion", accessor: "info" },
-    { Header: "Fecha", accessor: "fecha" },
-    { Header: "Hora", accessor: "hora" },
+    { Header: "Información adicional", accessor: "info" },
+    { Header: "Registro", accessor: "registro" },
+    { Header: "Última modificación", accessor: "ultMod" },
     { Header: "Estado", accessor: "estado" },
   ];
 
@@ -129,7 +151,7 @@ export default function App() {
       };
 
       const processType = isEditing ? "UpdateOne" : "Create";
-      const url = `http://localhost:4004/api/security/gruposet/crud?ProcessType=${processType}&DBServer=${dbConnection}`;
+      const url = `${URL_BASE}/api/security/gruposet/crud?ProcessType=${processType}&DBServer=${dbConnection}`;
 
 
 
@@ -147,9 +169,10 @@ export default function App() {
 
         // Refrescar los datos después de guardar
         const resFetch = await axios.post(
-          `http://localhost:4004/api/security/gruposet/crud?ProcessType=GetAll&DBServer=${dbConnection}`,
+          `${URL_BASE}/api/security/gruposet/crud?ProcessType=GetAll&DBServer=${dbConnection}`,
           {}
         );
+
         const records =
           resFetch.data?.data?.[0]?.dataRes?.map((item) => ({
             sociedad: item.IDSOCIEDAD,
@@ -208,7 +231,7 @@ export default function App() {
     }
 
     try {
-      const url = `http://localhost:4004/api/security/gruposet/crud?ProcessType=UpdateOne&DBServer=${dbConnection}&LoggedUser=FMIRANDAJ`;
+      const url = `${URL_BASE}/api/security/gruposet/crud?ProcessType=UpdateOne&DBServer=${dbConnection}&LoggedUser=FMIRANDAJ`;
 
       const payload = {
         // Llaves para identificar el registro
@@ -235,7 +258,7 @@ export default function App() {
 
       // 🔄 Refrescar la tabla
       const res = await axios.post(
-        `http://localhost:4004/api/security/gruposet/crud?ProcessType=GetAll&DBServer=${dbConnection}`,
+        `${URL_BASE}/api/security/gruposet/crud?ProcessType=GetAll&DBServer=${dbConnection}`,
         {}
       );
       const records =
@@ -274,13 +297,13 @@ export default function App() {
         ID: selectedRow.idg
       };
 
-      const url = `http://localhost:4004/api/security/gruposet/crud?ProcessType=DeleteOne&DBServer=${dbConnection}`;
+      const url = `${URL_BASE}/api/security/gruposet/crud?ProcessType=DeleteOne&DBServer=${dbConnection}`;
       await axios.post(url, payload);
 
       alert("🟡 Registro desactivado");
       // 🔄 Refrescar tabla
       const res = await axios.post(
-        `http://localhost:4004/api/security/gruposet/crud?ProcessType=GetAll&DBServer=${dbConnection}`,
+        `${URL_BASE}/api/security/gruposet/crud?ProcessType=GetAll&DBServer=${dbConnection}`,
         {}
       );
       const records =
@@ -317,13 +340,13 @@ export default function App() {
         ID: selectedRow.idg
       };
 
-      const url = `http://localhost:4004/api/security/gruposet/crud?ProcessType=DeleteHard&DBServer=${dbConnection}`;
+      const url = `${URL_BASE}/api/security/gruposet/crud?ProcessType=DeleteHard&DBServer=${dbConnection}`;
       await axios.post(url, payload);
 
       alert("🟡 Registro elimina");
       // 🔄 Refrescar tabla
       const res = await axios.post(
-        `http://localhost:4004/api/security/gruposet/crud?ProcessType=GetAll&DBServer=${dbConnection}`,
+        `${URL_BASE}/api/security/gruposet/crud?ProcessType=GetAll&DBServer=${dbConnection}`,
         {}
       );
       const records =
@@ -432,35 +455,91 @@ export default function App() {
           {loading ? (
             <p className="loading-msg">Cargando datos...</p>
           ) : data.length > 0 ? (
-            <AnalyticalTable
-              data={data}
-              columns={columns}
-              className="ui5-table-root"
-              style={{
-                width: "100%",
-                height: "auto",
-                backgroundColor: "#1e1e1e",
-                color: "white",
-                borderRadius: "8px",
-                maxHeight: "600px",
-                overflowY: "auto",
-              }}
-              onRowClick={(ev) => {
-                const r = ev?.row?.original ?? ev?.detail?.row?.original ?? null;
-                if (r) setSelectedRow(r);
-              }}
-              reactTableOptions={{
-                getRowProps: (row) => ({
-                  style: row?.original?.borrado
-                    ? {
-                      opacity: 0.45,
-                      filter: "grayscale(20%)",
-                      backgroundColor: "#282828"
-                    }
-                    : {}
-                })
-              }}
-            />
+            // <AnalyticalTable
+            //   data={data}
+            //   columns={columns}
+            //   className="ui5-table-root"
+            //   style={{
+            //     width: "100%",
+            //     height: "auto",
+            //     backgroundColor: "#1e1e1e",
+            //     color: "white",
+            //     borderRadius: "8px",
+            //     maxHeight: "600px",
+            //     overflowY: "auto",
+            //   }}
+            //   onRowClick={(ev) => {
+            //     const r = ev?.row?.original ?? ev?.detail?.row?.original ?? null;
+            //     if (r) setSelectedRow(r);
+            //   }}
+            //   reactTableOptions={{
+            //     getRowProps: (row) => ({
+            //       style: row?.original?.borrado
+            //         ? {
+            //           opacity: 0.45,
+            //           filter: "grayscale(20%)",
+            //           backgroundColor: "#282828"
+            //         }
+            //         : {}
+            //     })
+            //   }}
+            // />
+            <Table
+              headerRow={
+                <TableHeaderRow sticky>
+                  {columns.map((column, index) => (
+                    <TableHeaderCell key={index}>{column.Header}</TableHeaderCell>
+                  ))}
+                </TableHeaderRow>
+              }
+            >
+              {data.map((row, index) => (
+                <TableRow key={index}>
+                  <TableCell>
+                    <span>{row.sociedad}</span>
+                  </TableCell>
+                  <TableCell>
+                    <span>{row.sucursal}</span>
+                  </TableCell>
+                  <TableCell>
+                    <span>{row.etiqueta}</span>
+                  </TableCell>
+                  <TableCell>
+                    <span>{row.valor}</span>
+                  </TableCell>
+                  <TableCell>
+                    <span>{row.idgroup}</span>
+                  </TableCell>
+                  <TableCell>
+                    <span>{row.idg}</span>
+                  </TableCell>
+                  <TableCell>
+                    <span>{row.info}</span>
+                  </TableCell>
+                  <TableCell>
+                    <span>{row.registro}</span>
+                  </TableCell>
+                  <TableCell>
+                    <span>{row.ultMod}</span>
+                  </TableCell>
+                  <TableCell>
+                    {row.estado ? (
+                      <Icon
+                        name="accept"
+                        style={{ color: "green" }}
+                        title="Activo"
+                      />
+                    ) : (
+                      <Icon
+                        name="decline"
+                        style={{ color: "red" }}
+                        title="Inactivo"
+                      />
+                    )}
+                  </TableCell>
+                </TableRow>
+              ))}
+            </Table>
           ) : (
             <p className="no-data-msg">No hay datos disponibles</p>
           )}
