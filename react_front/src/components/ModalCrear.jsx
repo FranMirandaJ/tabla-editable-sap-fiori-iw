@@ -15,11 +15,12 @@ import {
 import ModalEditGrupoET from "./ModalEditGrupoET.jsx";
 
 // Constantes para consultar el backend del equipo de miguellopez corriendo en localhost
-const URL_BASE = "http://localhost:3034/api/cat/crudLabelsValues";
-const LOGGED_USER = "MIGUELLOPEZ";
+const URL_BASE_BACK_MIGUEL = "http://localhost:3034/api/cat/crudLabelsValues";
+const URL_BASE_BACK_NOSOTROS = "https://app-restful-sap-cds.onrender.com";
+const LOGGED_USER = "FMIRADAJ";
 
 
-const ModalCrear = ({ isModalOpen, handleCloseModal, dbConnection }) => {
+const ModalCrear = ({ isModalOpen, handleCloseModal, dbConnection, refetchData }) => {
 
     const [sociedadesCatalog, setSociedadesCatalog] = useState([]);
     const [cedisCatalog, setCedisCatalog] = useState([]);
@@ -40,10 +41,10 @@ const ModalCrear = ({ isModalOpen, handleCloseModal, dbConnection }) => {
     const [id, setid] = useState("");
     const [infoAdicional, setInfoAdicional] = useState("");
 
-    console.log("sociedades",sociedadesCatalog);
-    console.log("cedis", cedisCatalog);
-    console.log("etiquetas", etiquetasCatalog);
-    console.log("valores", valoresCatalog);
+    // console.log("sociedades",sociedadesCatalog);
+    // console.log("cedis", cedisCatalog);
+    // console.log("etiquetas", etiquetasCatalog);
+    // console.log("valores", valoresCatalog);
     
     const [isModalEditGrupoETOpen, setIsModalEditGrupoETOpen] = useState(false);
 
@@ -51,7 +52,7 @@ const ModalCrear = ({ isModalOpen, handleCloseModal, dbConnection }) => {
         const fetchCatalogos = async () => {
             if (!isModalOpen) return;
             try {
-                const url = `${URL_BASE}?ProcessType=GetAll&LoggedUser=${LOGGED_USER}&DBServer=${dbConnection}`;
+                const url = `${URL_BASE_BACK_MIGUEL}?ProcessType=GetAll&LoggedUser=MIGUELLOPEZ&DBServer=${dbConnection}`;
                 const response = await fetch(url, {
                     method: "POST",
                     headers: { "Content-Type": "application/json" },
@@ -157,67 +158,44 @@ const ModalCrear = ({ isModalOpen, handleCloseModal, dbConnection }) => {
     }, [isModalOpen]);
 
     const handleGuardar = async () => {
-        // try {
-        //     const registro = {
-        //         IDSOCIEDAD: Number(sociedad),
-        //         IDCEDI: Number(sucursal),
-        //         IDETIQUETA: etiqueta,
-        //         IDVALOR: idValor,
-        //         INFOAD: infoAdicional,
-        //         IDGRUPOET: idGroupEt,
-        //         ID: id,
-        //         ACTIVO: true,
-        //     };
+        try {
+            const registro = {
+                IDSOCIEDAD: Number(sociedad),
+                IDCEDI: Number(cedis),
+                IDETIQUETA: etiqueta,
+                IDVALOR: valor,
+                INFOAD: infoAdicional,
+                IDGRUPOET: grupoET,
+                ID: id,
+                ACTIVO: true,
+            };
 
-        //     const processType = isEditing ? "UpdateOne" : "Create";
-        //     const url = `${URL_BASE}/api/security/gruposet/crud?ProcessType=${processType}&DBServer=${dbConnection}`;
+            const processType = "Create";
+            const url = `${URL_BASE_BACK_NOSOTROS}/api/security/gruposet/crud?ProcessType=${processType}&DBServer=${dbConnection}&LoggedUser=${LOGGED_USER}`;
 
+            console.log(`📤 Enviando ${processType} a:`, url);
+            console.log("📦 Datos:", registro);
 
+            const res = await axios.post(url, registro, {
+                headers: {
+                    "Content-Type": "application/json",
+                },
+            });
 
-        //     console.log(`📤 Enviando ${processType} a:`, url);
-        //     console.log("📦 Datos:", registro);
+            if (res.data?.success || res.status === 200) {
+                alert(`✅ Registro creado correctamente`);
 
-        //     const res = await axios.post(url, registro, {
-        //         headers: {
-        //             "Content-Type": "application/json",
-        //         },
-        //     });
+                refetchData();
+            } else {
+                alert(`⚠️ Error al ${isEditing ? "actualizar" : "crear"} el registro`);
+            }
 
-        //     if (res.data?.success || res.status === 200) {
-        //         alert(`✅ Registro ${isEditing ? "actualizado" : "creado"} correctamente`);
-
-        //         // Refrescar los datos después de guardar
-        //         const resFetch = await axios.post(
-        //             `${URL_BASE}/api/security/gruposet/crud?ProcessType=GetAll&DBServer=${dbConnection}`,
-        //             {}
-        //         );
-
-        //         const records =
-        //             resFetch.data?.data?.[0]?.dataRes?.map((item) => ({
-        //                 sociedad: item.IDSOCIEDAD,
-        //                 sucursal: item.IDCEDI,
-        //                 etiqueta: item.IDETIQUETA,
-        //                 valor: item.IDVALOR,
-        //                 idgroup: item.IDGRUPOET,
-        //                 idg: item.ID,
-        //                 info: item.INFOAD,
-        //                 fecha: item.FECHAREG,
-        //                 hora: item.HORAREG,
-        //                 estado: item.ACTIVO ? "Activo" : "Inactivo",
-        //             })) || [];
-        //         setData(records);
-        //     } else {
-        //         alert(`⚠️ Error al ${isEditing ? "actualizar" : "crear"} el registro`);
-        //     }
-
-        //     // Cerrar el modal y limpiar
-        //     setIsModalOpen(false);
-        //     setIsEditing(false);
-        //     setSelectedRow(null);
-        // } catch (error) {
-        //     console.error("❌ Error al guardar:", error);
-        //     alert("Error al guardar el registro: " + error.message);
-        // }
+            limpiarFormulario();
+            handleCloseModal();
+        } catch (error) {
+            console.error("❌ Error al guardar:", error);
+            alert("Error al guardar el registro: " + error.message);
+        }
     };
 
     const limpiarFormulario = () => {
@@ -396,7 +374,7 @@ const ModalCrear = ({ isModalOpen, handleCloseModal, dbConnection }) => {
                                     type="Text"
                                     valueState="None"
                                     disabled={true}
-                                //value=""
+                                    value={grupoET}
                                 />
                                 <Button
                                     icon="edit"
@@ -439,6 +417,8 @@ const ModalCrear = ({ isModalOpen, handleCloseModal, dbConnection }) => {
                 setGrupoET={setGrupoET}
                 dbConnection={dbConnection}
                 etiquetas={etiquetasCatalog}
+                sociedadSeleccionada={sociedad}
+                cediSeleccionado={cedis}
                 valores={valoresCatalog}
             />
         </>

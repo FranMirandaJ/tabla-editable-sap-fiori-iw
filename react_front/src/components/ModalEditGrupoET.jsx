@@ -12,16 +12,53 @@ import {
     Icon,
 } from "@ui5/webcomponents-react";
 
-const ModalEditGrupoET = ({ isModalOpen, handleCloseModal, setGrupoET, dbConnection, etiquetas, valores }) => {
+const ModalEditGrupoET = ({ isModalOpen, handleCloseModal, setGrupoET, etiquetas, valores, sociedadSeleccionada, cediSeleccionado }) => {
 
     const [etiqueta, setEtiqueta] = useState("");
     const [valor, setValor] = useState("");
+
+    const [filteredEtiquetas, setFilteredEtiquetas] = useState([]);
+    const [filteredValores, setFilteredValores] = useState([]);
+
+    const limpiarEstado = () => {
+        setEtiqueta("");
+        setValor("");
+        setFilteredEtiquetas([]);
+        setFilteredValores([]);
+    };
+
+    useEffect(() => {
+        if (isModalOpen && sociedadSeleccionada && cediSeleccionado) {
+            const etiquetasFiltradas = etiquetas.filter(et =>
+                et.IDSOCIEDAD?.toString() === sociedadSeleccionada &&
+                et.IDCEDI?.toString() === cediSeleccionado
+            );
+            setFilteredEtiquetas(etiquetasFiltradas);
+        } else {
+            // Si el modal no está abierto o faltan datos, limpiar
+            limpiarEstado();
+        }
+    }, [isModalOpen, sociedadSeleccionada, cediSeleccionado, etiquetas]);
+
+    const handleAceptar = () => {
+        if (etiqueta && valor) {
+            setGrupoET(`${etiqueta}-${valor}`);
+            handleCloseModal(); // Cierra el modal
+        } else {
+            alert("Por favor, selecciona una etiqueta y un valor.");
+        }
+    };
+
+    const handleCerrar = () => {
+        limpiarEstado();
+        handleCloseModal();
+    };
 
     return (
         <Dialog
             stretch={false}
             open={isModalOpen}
-            onAfterClose={handleCloseModal}
+            onAfterClose={handleCerrar} // Limpia el estado al cerrar
             headerText="Definir Grupo ET"
             style={{
                 width: "500px",  // o el ancho que prefieras
@@ -33,12 +70,12 @@ const ModalEditGrupoET = ({ isModalOpen, handleCloseModal, setGrupoET, dbConnect
                         <>
                             <Button
                                 design="Emphasized"
-                                onClick={() => { }}
+                                onClick={handleAceptar}
                                 className="btn-guardar-modal"
                             >
                                 Aceptar
                             </Button>
-                            <Button design="Transparent" onClick={handleCloseModal}>
+                            <Button design="Transparent" onClick={handleCerrar}>
                                 Cancelar
                             </Button>
                         </>
@@ -60,35 +97,42 @@ const ModalEditGrupoET = ({ isModalOpen, handleCloseModal, setGrupoET, dbConnect
                         <Label required>Grupo ET - Etiqueta</Label>
                         <ComboBox
                             className="modal-combobox"
-                            onChange={(e) => {
-                                const value = e.target.value;
-                                setEtiqueta(value);
+                            value={etiqueta}
+                            onSelectionChange={(e) => {
+                                const selectedItem = e.detail.item;
+                                const selectedKey = selectedItem?.dataset.key;
+                                setEtiqueta(selectedKey);
+                                // Limpiar valor y filtrar
+                                setValor("");
+                                const valoresFiltrados = valores.filter(v => v.parentEtiqueta === selectedKey);
+                                setFilteredValores(valoresFiltrados);
                             }}
                             placeholder="Selecciona una etiqueta"
-                            value={etiqueta}
                             filter="Contains"
                             style={{ width: '400px' }}
                         >
-                            {etiquetas.map(item =>
-                                <ComboBoxItem key={item.key} text={item.IDETIQUETA} />
+                            {filteredEtiquetas.map(item =>
+                                <ComboBoxItem key={item.key} data-key={item.key} text={item.text} />
                             )}
                         </ComboBox>
                     </div>
                     <div className="modal-field">
                         <Label required>Grupo ET - Valor</Label>
                         <ComboBox
+                            disabled={!etiqueta}
                             className="modal-combobox"
-                            onChange={(e) => {
-                                const value = e.target.value;
-                                setValor(value);
+                            value={valor}
+                            onSelectionChange={(e) => {
+                                const selectedItem = e.detail.item;
+                                const selectedKey = selectedItem?.dataset.key;
+                                setValor(selectedKey);
                             }}
                             placeholder="Selecciona un valor"
-                            value={valor}
                             filter="Contains"
                             style={{ width: '400px' }}
                         >
-                            {valores.map(item =>
-                                <ComboBoxItem key={item.IDVALOR} text={item.IDVALOR} />
+                            {filteredValores.map(item =>
+                                <ComboBoxItem key={item.key} data-key={item.key} text={item.text} />
                             )}
                         </ComboBox>
                     </div>
@@ -96,11 +140,11 @@ const ModalEditGrupoET = ({ isModalOpen, handleCloseModal, setGrupoET, dbConnect
                         <Label>Resultado (Etiqueta-Valor)</Label>
                         <div className="grupo-et-container">
                             <Input
+                                value={etiqueta && valor ? `${etiqueta}-${valor}` : ""}
                                 icon={null}
                                 type="Text"
                                 valueState="None"
-                                disabled={true}
-                            //value=""
+                                disabled
                             />
                         </div>
                     </div>

@@ -41,6 +41,7 @@ import "@ui5/webcomponents-icons/dist/database.js";
 // Importacion de iconos
 import "@ui5/webcomponents-icons/dist/accept.js";
 import "@ui5/webcomponents-icons/dist/decline.js";
+
 const URL_BASE = "https://app-restful-sap-cds.onrender.com"; // http://localhost:4004
 
 export default function App() {
@@ -65,41 +66,42 @@ export default function App() {
     setDbPost(dbPost === "MongoDB" ? "Azure" : "MongoDB");
   };
 
+  const fetchData = async () => {
+    setLoading(true);
+    try {
+      const res = await axios.post(
+        `${URL_BASE}/api/security/gruposet/crud?ProcessType=GetAll&DBServer=${dbConnection}`,
+        {}
+      );
+
+      //console.log("SERVER RESPONSE ==============> ",res.data?.data?.[0]?.dataRes);
+
+      const records =
+        res.data?.data?.[0]?.dataRes?.map((item) => ({
+          sociedad: item.IDSOCIEDAD,
+          sucursal: item.IDCEDI,
+          etiqueta: item.IDETIQUETA,
+          valor: item.IDVALOR,
+          idgroup: item.IDGRUPOET,
+          idg: item.ID,
+          info: item.INFOAD,
+          registro: `${item.FECHAREG} ${item.HORAREG} (${item.USUARIOREG})`,
+          ultMod: !item.FECHAULTMOD ? "Sin modificaciones" : `${item.FECHAULTMOD} ${item.HORAULTMOD} (${item.USUARIOMOD})`,
+          estado: item.ACTIVO,
+        })) || [];
+
+      //console.log("Datos obtenidos:", records);
+
+      setData(records);
+    } catch (error) {
+      console.error("Error al obtener datos:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   // Cargar datos del backend
   useEffect(() => {
-    const fetchData = async () => {
-      setLoading(true);
-      try {
-        const res = await axios.post(
-          `${URL_BASE}/api/security/gruposet/crud?ProcessType=GetAll&DBServer=${dbConnection}`,
-          {}
-        );
-
-        //console.log("SERVER RESPONSE ==============> ",res.data?.data?.[0]?.dataRes);
-
-        const records =
-          res.data?.data?.[0]?.dataRes?.map((item) => ({
-            sociedad: item.IDSOCIEDAD,
-            sucursal: item.IDCEDI,
-            etiqueta: item.IDETIQUETA,
-            valor: item.IDVALOR,
-            idgroup: item.IDGRUPOET,
-            idg: item.ID,
-            info: item.INFOAD,
-            registro: `${item.FECHAREG} ${item.HORAREG} (${item.USUARIOREG})`,
-            ultMod: !item.FECHAULTMOD ? "Sin modificaciones" : `${item.FECHAULTMOD} ${item.HORAULTMOD} (${item.USUARIOMOD})`,
-            estado: item.ACTIVO,
-          })) || [];
-
-        //console.log("Datos obtenidos:", records);
-
-        setData(records);
-      } catch (error) {
-        console.error("Error al obtener datos:", error);
-      } finally {
-        setLoading(false);
-      }
-    };
 
     fetchData();
   }, [dbConnection]);
@@ -482,6 +484,7 @@ export default function App() {
         isModalOpen={isModalOpen}
         handleCloseModal={cerrarModalCreacion}
         dbConnection={dbConnection}
+        refetchData={fetchData}
       />
 
       {/* 🔹 Ventana de configuración (nueva) */}
