@@ -76,8 +76,6 @@ export default function App() {
   const [filteredEtiquetasCatalog, setFilteredEtiquetasCatalog] = useState([]);
   const [filteredValoresCatalog, setFilteredValoresCatalog] = useState([]);
 
-console.log(editingRowData);
-
   // --- Cambio de conexión ---
   const handleSwitchChange = () => {
     setDbConnection(dbConnection === "MongoDB" ? "Azure" : "MongoDB");
@@ -248,6 +246,77 @@ console.log(editingRowData);
   ];
 
   const cerrarModalCreacion = () => setIsModalOpen(false);
+
+  const handleGuardarCambiosEdicion = async (editedData) => {
+    if (!editedData.sociedad || !editedData.sucursal || !editedData.etiqueta || !editedData.valor || !editedData.idgroup || !editedData.idg) {
+      alert("Completa Sociedad, CEDI, Etiqueta, Valor, Grupo Etiqueta y ID.");
+      return;
+    }
+    try {
+
+      const url = `${URL_BASE}/api/security/gruposet/crud?ProcessType=UpdateOne&DBServer=${dbConnection}`;
+
+      const payload = {
+        IDSOCIEDAD: editedData.sociedad,
+        IDCEDI: editedData.sucursal,
+        IDETIQUETA: editedData.etiqueta,
+        IDVALOR: editedData.valor,
+        IDGRUPOET: editedData.idgroup,
+        ID: editedData.idg,
+        data: {
+          IDSOCIEDAD: editedData.sociedad,
+          IDCEDI: editedData.sucursal,
+          IDETIQUETA: editedData.etiqueta,
+          IDVALOR: editedData.valor,
+          IDGRUPOET: editedData.idgroup,
+          ID: editedData.idg,
+          INFOAD: editedData.info,
+          ACTIVO: editedData.estado !== false,
+          BORRADO: editedData.estado || false
+        }
+      };
+
+      // const payload = {
+      //           IDSOCIEDAD: editedData.sociedad,
+      //           IDCEDI: editedData.sucursal,
+      //           IDETIQUETA: editedData.etiqueta,
+      //           IDVALOR:editedData.valor,
+      //           INFOAD: editedData.info,
+      //           IDGRUPOET: editedData.idgroup,
+      //           ID: editedData.idg,
+      //           ACTIVO: editedData.estado !== false,
+      //           BORRADO: editedData.estado || false
+      //       };
+
+      const res = await fetch(url, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload)
+      });
+
+      console.log(res);
+      
+
+      const json = await res.json().catch(() => ({}));
+
+      if (!res.ok) {
+        if (res.status === 409) {
+          MessageBox.error("Ya existe un registro con esos datos. No se puede actualizar.");
+          return;
+        }
+        console.log("HTTP " + res.status + (json.messageUSR ? " - " + json.messageUSR : ""));
+      }
+
+      alert("✅ Cambios guardados correctamente");
+
+      // 🔄 Refrescar tabl
+      fetchData();
+    } catch (error) {
+      console.error("Error al guardar cambios:", error);
+      alert("❌ No se pudieron guardar los cambios");
+    }
+
+  }
 
   const handleActivar = async () => {
     // Verificar si hay una fila seleccionada
@@ -707,17 +776,13 @@ console.log(editingRowData);
                           <span>{row.ultMod}</span>
                         </TableCell>
                         <TableCell>
-                          <FlexBox justifyContent="Center" alignItems="Center">
+                          <FlexBox direction="Column" style={{ gap: '0.5rem' }}>
                             <Button
                               icon="accept"
                               design="Positive"
-                              style={{ marginRight: '8px' }}
                               onClick={(e) => {
                                 e.stopPropagation();
-                                // Aquí iría la lógica para guardar los cambios de `editingRowData`
-                                console.log("Guardando:", editingRowData);
-                                // Llama a tu función de actualización aquí
-                                // handleGuardarCambios(editingRowData);
+                                handleGuardarCambiosEdicion(editingRowData);
                                 setExpandedRowId(null); // Cierra la fila después de guardar
                               }}
                             >
