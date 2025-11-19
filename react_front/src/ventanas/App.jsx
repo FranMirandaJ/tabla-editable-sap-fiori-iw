@@ -39,6 +39,7 @@ import "@ui5/webcomponents-icons/dist/home.js";
 import "@ui5/webcomponents-icons/dist/settings.js";
 import "@ui5/webcomponents-icons/dist/database.js";
 // Importacion de iconos
+import "@ui5/webcomponents-icons/dist/edit.js";
 import "@ui5/webcomponents-icons/dist/accept.js";
 import "@ui5/webcomponents-icons/dist/decline.js";
 import "@ui5/webcomponents-icons/dist/navigation-down-arrow.js";
@@ -53,7 +54,8 @@ export default function App() {
   const [loading, setLoading] = useState(true);
   const [selectedRow, setSelectedRow] = useState(null);
   const [isEditing, setIsEditing] = useState(false);
-  const [expandedRows, setExpandedRows] = useState(new Set());
+  const [expandedRowId, setExpandedRowId] = useState(null);
+  const [editingRowData, setEditingRowData] = useState(null);
 
   // --- Estados añadidos del menú ---
   const [isNavOpen, setIsNavOpen] = useState(false);
@@ -254,17 +256,23 @@ export default function App() {
   };
 
   const handleToggleExpand = (rowId) => {
-    // Detener la propagación para no activar la selección de fila
-    // e.stopPropagation();
-    setExpandedRows(prevExpanded => {
-      const newExpanded = new Set(prevExpanded);
-      if (newExpanded.has(rowId)) {
-        newExpanded.delete(rowId);
-      } else {
-        newExpanded.add(rowId);
-      }
-      return newExpanded;
-    });
+    const newExpandedRowId = expandedRowId === rowId ? null : rowId;
+    setExpandedRowId(newExpandedRowId);
+
+    if (newExpandedRowId) {
+      // Cuando una fila se expande, inicializamos los datos de edición
+      const rowData = data.find(row => row.idg === rowId);
+      setEditingRowData(rowData);
+    } else {
+      // Cuando se colapsa, limpiamos los datos de edición
+      setEditingRowData(null);
+    }
+  };
+
+  // Maneja los cambios en los inputs de la fila expandida
+  const handleEditInputChange = (e) => {
+    const { name, value } = e.target;
+    setEditingRowData(prev => ({ ...prev, [name]: value }));
   };
 
   return (
@@ -389,7 +397,7 @@ export default function App() {
               }}
             >
               {data.map((row) => {
-                const isExpanded = expandedRows.has(row.idg);
+                const isExpanded = expandedRowId === row.idg;
                 return (
                   <React.Fragment key={row.idg}>
                     <TableRow
@@ -424,19 +432,71 @@ export default function App() {
                       </TableCell>
                     </TableRow>
                     {isExpanded && (
-                      <TableRow>
-                        {/* Celdas vacías para la fila expandida, incluyendo la del botón */}
-                        <TableCell></TableCell>
-                        <TableCell></TableCell>
-                        <TableCell></TableCell>
-                        <TableCell></TableCell>
-                        <TableCell></TableCell>
-                        <TableCell></TableCell>
-                        <TableCell></TableCell>
-                        <TableCell></TableCell>
-                        <TableCell></TableCell>
-                        <TableCell></TableCell>
-                        <TableCell></TableCell>
+                      <TableRow className="expanded-row">
+                        {/* Celda vacía para el botón de expandir */}
+                        <TableCell />
+                        <TableCell>
+                          <Input name="sociedad" value={editingRowData?.sociedad || ''} onInput={handleEditInputChange} />
+                        </TableCell>
+                        <TableCell>
+                          <Input name="sucursal" value={editingRowData?.sucursal || ''} onInput={handleEditInputChange} />
+                        </TableCell>
+                        <TableCell>
+                          <Input name="etiqueta" value={editingRowData?.etiqueta || ''} onInput={handleEditInputChange} />
+                        </TableCell>
+                        <TableCell>
+                          <Input name="valor" value={editingRowData?.valor || ''} onInput={handleEditInputChange} />
+                        </TableCell>
+                        <TableCell>
+                          <FlexBox>
+                            <Input name="idgroup" value={editingRowData?.idgroup || ''} onInput={handleEditInputChange} style={{ flexGrow: 1, marginRight: '8px' }} />
+                            <Button icon="edit" design="Transparent" />
+                          </FlexBox>
+                        </TableCell>
+                        <TableCell>
+                          <Input name="idg" value={editingRowData?.idg || ''} onInput={handleEditInputChange} />
+                        </TableCell>
+                        <TableCell>
+                          <Input name="info" value={editingRowData?.info || ''} onInput={handleEditInputChange} />
+                        </TableCell>
+                        <TableCell>
+                          {/* El registro generalmente no es editable */}
+                          <span>{row.registro}</span>
+                        </TableCell>
+                        <TableCell>
+                          {/* La última modificación no es editable */}
+                          <span>{row.ultMod}</span>
+                        </TableCell>
+                        <TableCell>
+                          <FlexBox justifyContent="Center" alignItems="Center">
+                            <Button
+                              icon="accept"
+                              design="Positive"
+                              style={{ marginRight: '8px' }}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                // Aquí iría la lógica para guardar los cambios de `editingRowData`
+                                console.log("Guardando:", editingRowData);
+                                // Llama a tu función de actualización aquí
+                                // handleGuardarCambios(editingRowData);
+                                setExpandedRowId(null); // Cierra la fila después de guardar
+                              }}
+                            >
+                              Guardar
+                            </Button>
+                            <Button
+                              icon="decline"
+                              design="Negative"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setExpandedRowId(null); // Simplemente cierra la fila
+                                setEditingRowData(null);
+                              }}
+                            >
+                              Cancelar
+                            </Button>
+                          </FlexBox>
+                        </TableCell>
                       </TableRow>
                     )}
                   </React.Fragment>
