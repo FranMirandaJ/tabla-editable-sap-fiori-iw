@@ -48,6 +48,12 @@ sap.ui.define([
     _oFilterDialog: null,
     onInit() {
 
+       // 1) Modelo para saber qué servidor de BD está activo
+      var oConfigModel = new sap.ui.model.json.JSONModel({
+          dbServer: "mongo" // valor inicial: "mongo" o lo que tengas por default
+      });
+      this.getView().setModel(oConfigModel, "config");
+
       // Modelos existentes
       this.getView().setModel(new JSONModel({}), "updateModel");
       this.getView().setModel(new JSONModel({}), "createModel");
@@ -101,6 +107,19 @@ sap.ui.define([
 
       // Carga de la tabla inicial
       this._loadData();
+    },
+
+        
+     //Devuelve la URL base según la BD seleccionada en el switch.
+     
+    _getBaseUrl: function () {
+        var sDb = this.getView().getModel("config").getProperty("/dbServer");
+
+        if (sDb === "azure") {
+            return "/api/azure";      
+        } else {
+            return "/api/mongo";      
+        }
     },
 
 
@@ -1197,11 +1216,27 @@ sap.ui.define([
       this._getConfigDialog().then(oDialog => oDialog.close());
     },
 
-    onDbServerChange: function (oEvent) {
+    // Cuando cambio el switch de MongoDB <-> Azure
+    onDbServerChange: async function (oEvent) {
       const bState = oEvent.getParameter("state");
+
+      // 1) Guardar el estado en el modelo que ya usas para DBServer
       this.getView().getModel("dbServerSwitch").setProperty("/state", bState);
 
-      this._loadData();
+      // 2) (Opcional, si estás usando el modelo "config" para el texto del diálogo)
+      //    Esto hace que se pueda usar config>/dbServer en el label del fragmento.
+      const sDb = bState ? "azure" : "mongo";
+      const oConfigModel = this.getView().getModel("config");
+      if (oConfigModel) {
+        oConfigModel.setProperty("/dbServer", sDb);
+      }
+
+      // 3) Volver a cargar CATÁLOGOS desde la nueva BD (Mongo o Azure)
+      await this._loadExternalCatalogData();
+      this._bCatalogLoaded = true;
+
+      // 4) Volver a cargar los datos de la tabla desde esa misma BD
+      await this._loadData();
     },
 
     onDeletePress: function () {
@@ -1828,6 +1863,53 @@ sap.ui.define([
       oTable.setModel(oModel, "tableModel");
     },
 
+    // === GRUPO ET para el modal de CREAR ===
+    onOpenGrupoEt: function () {
+      const oCreate = this.getView().getModel("createModel");
+      const sSoc   = oCreate.getProperty("/IDSOCIEDAD");
+      const sCedi  = oCreate.getProperty("/IDCEDI");
+
+      if (!sSoc || !sCedi) {
+        sap.m.MessageToast.show("Selecciona primero Sociedad y CEDI.");
+        return;
+      }
+
+      // Modo de trabajo del diálogo
+      this._grupoEtEditMode = "create";
+
+      const oCascade      = this.getView().getModel("cascadeModel");
+      const aEtiquetasAll = oCascade.getProperty("/etiquetasAll") || [];
+
+      // Filtrar etiquetas sólo para esa Sociedad / CEDI
+      const aFiltradas = aEtiquetasAll.filter(e =>
+        String(e.IDSOCIEDAD) === String(sSoc) &&
+        String(e.IDCEDI)     === String(sCedi)
+      );
+      oCascade.setProperty("/etiquetas", aFiltradas);
+
+      // Limpiar selección previa en el modelo de Grupo ET
+      const oGM = this.getView().getModel("grupoEtModel");
+      oGM.setProperty("/selectedEtiqueta", null);
+      oGM.setProperty("/selectedValor", null);
+      oGM.setProperty("/valoresList", []);
+      oGM.setProperty("/displayName", "");
+
+      // Abrir / crear el diálogo compartido
+      if (!this._oGrupoEtDialog) {
+        sap.ui.core.Fragment.load({
+          id: this.getView().getId() + "--grupoEtDialog",
+          name: "com.itt.ztgruposet.frontendztgruposet.view.fragments.GrupoEtDialog",
+          controller: this
+        }).then(oDialog => {
+          this._oGrupoEtDialog = oDialog;
+          this.getView().addDependent(oDialog);
+          oDialog.open();
+        });
+      } else {
+        this._oGrupoEtDialog.open();
+      }
+    },
+
     // Abre el diálogo (carga fragment con id prefijado, repuebla listas y abre)
     onOpenGrupoEtInline: function () {
       const oInline = this.getView().getModel("inlineEdit");
@@ -1872,29 +1954,38 @@ sap.ui.define([
     onGrupoEtiquetaChange: function (oEvent) {
       const selectedEtiqueta = oEvent.getSource().getSelectedKey();
 
-      // 🔁 Elegir modelo según el contexto
+      // 1) Elegir de qué modelo leer según el modo
       let oContextModel;
       if (this._grupoEtEditMode === "update") {
         oContextModel = this.getView().getModel("updateModel");
       } else if (this._grupoEtEditMode === "inline") {
         oContextModel = this.getView().getModel("inlineEdit");
-      } else { // create por defecto
+      } else { // "create" por defecto
         oContextModel = this.getView().getModel("createModel");
       }
 
       const oGM      = this.getView().getModel("grupoEtModel");
       const oCascade = this.getView().getModel("cascadeModel");
 
-      const sSoc  = oContextModel.getProperty("/IDSOCIEDAD");
-      const sCedi = oContextModel.getProperty("/IDCEDI");
-      const aAllVals = oCascade.getProperty("/valoresAll") || [];
+      // 2) Leer Sociedad y CEDI correctamente según el modo
+      let sSoc, sCedi;
+      if (this._grupoEtEditMode === "inline") {
+        sSoc  = oContextModel.getProperty("/current/IDSOCIEDAD");
+        sCedi = oContextModel.getProperty("/current/IDCEDI");
+      } else {
+        sSoc  = oContextModel.getProperty("/IDSOCIEDAD");
+        sCedi = oContextModel.getProperty("/IDCEDI");
+      }
 
+      // 3) Filtrar los valores de esa etiqueta + soc + cedi
+      const aAllVals = oCascade.getProperty("/valoresAll") || [];
       const aFiltered = aAllVals.filter(v =>
-        String(v.IDSOCIEDAD)   === String(sSoc) &&
-        String(v.IDCEDI)       === String(sCedi) &&
+        String(v.IDSOCIEDAD)    === String(sSoc) &&
+        String(v.IDCEDI)        === String(sCedi) &&
         String(v.parentEtiqueta) === String(selectedEtiqueta)
       );
 
+      // 4) Cargar la lista para el combo de "Grupo ET - Valor"
       oGM.setProperty("/valoresList", aFiltered);
       oGM.setProperty("/selectedValor", null);
       oGM.setProperty("/displayName", "");
@@ -2095,7 +2186,7 @@ sap.ui.define([
               path: "cascadeModel>/etiquetas",
               template: new CoreItem({
                 key: "{cascadeModel>IDETIQUETA}",
-                text: "{cascadeModel>ETIQUETA}"
+                text: "{cascadeModel>IDETIQUETA}"
               })
             },
             selectedKey: "{inlineEdit>/current/IDETIQUETA}",
@@ -2109,7 +2200,7 @@ sap.ui.define([
               path: "cascadeModel>/valores",
               template: new CoreItem({
                 key: "{cascadeModel>IDVALOR}",
-                text: "{cascadeModel>VALOR}"
+                text: "{cascadeModel>IDVALOR}"
               })
             },
             selectedKey: "{inlineEdit>/current/IDVALOR}"

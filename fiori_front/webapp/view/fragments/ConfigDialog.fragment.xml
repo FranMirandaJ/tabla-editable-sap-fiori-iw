@@ -7,12 +7,12 @@
             <VBox class="sapUiSmallMargin" alignItems="Center">
                 <HBox alignItems="Center" justifyContent="Center" class="sapUiSmallMarginTop">
                     <Label
-                        text="{= ${dbServerSwitch>/state} ? 'Azure Cosmos' : 'MongoDB' }"
+                        text="{= ${config>/dbServer} === 'azure' ? 'Azure Cosmos' : 'MongoDB' }"
                         class="sapUiSmallMarginEnd"
                         width="120px"
                         textAlign="End"
                     />
-                    <Switch id="dbServerSwitch" state="false" change="onDbServerChange" />
+                    <Switch id="dbServerSwitch" state="{= ${config>/dbServer} === 'azure' }" change="onDbServerChange" />
                 </HBox>
             </VBox>
         </content>
