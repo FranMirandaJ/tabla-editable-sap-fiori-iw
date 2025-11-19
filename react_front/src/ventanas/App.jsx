@@ -58,6 +58,7 @@ export default function App() {
   const [isEditing, setIsEditing] = useState(false);
   const [expandedRowId, setExpandedRowId] = useState(null);
   const [editingRowData, setEditingRowData] = useState(null);
+  const [originalRowData, setOriginalRowData] = useState(null);
 
   // --- Estados añadidos del menú ---
   const [isNavOpen, setIsNavOpen] = useState(false);
@@ -247,22 +248,23 @@ export default function App() {
 
   const cerrarModalCreacion = () => setIsModalOpen(false);
 
-  const handleGuardarCambiosEdicion = async (editedData) => {
+  const handleGuardarCambiosEdicion = async (editedData, originalData) => {
     if (!editedData.sociedad || !editedData.sucursal || !editedData.etiqueta || !editedData.valor || !editedData.idgroup || !editedData.idg) {
       alert("Completa Sociedad, CEDI, Etiqueta, Valor, Grupo Etiqueta y ID.");
       return;
     }
     try {
-
-      const url = `${URL_BASE}/api/security/gruposet/crud?ProcessType=UpdateOne&DBServer=${dbConnection}`;
+      const url = `${URL_BASE}/api/security/gruposet/crud?ProcessType=UpdateOne&DBServer=${dbConnection}&LoggedUser=FMIRANDAJ`;
 
       const payload = {
-        IDSOCIEDAD: editedData.sociedad,
-        IDCEDI: editedData.sucursal,
-        IDETIQUETA: editedData.etiqueta,
-        IDVALOR: editedData.valor,
-        IDGRUPOET: editedData.idgroup,
-        ID: editedData.idg,
+        // Llaves del registro ORIGINAL para que el backend lo encuentre
+        IDSOCIEDAD: originalData.sociedad,
+        IDCEDI: originalData.sucursal,
+        IDETIQUETA: originalData.etiqueta,
+        IDVALOR: originalData.valor,
+        IDGRUPOET: originalData.idgroup,
+        ID: originalData.idg,
+        // 'data' contiene todos los campos con sus NUEVOS valores
         data: {
           IDSOCIEDAD: editedData.sociedad,
           IDCEDI: editedData.sucursal,
@@ -276,35 +278,23 @@ export default function App() {
         }
       };
 
-      // const payload = {
-      //           IDSOCIEDAD: editedData.sociedad,
-      //           IDCEDI: editedData.sucursal,
-      //           IDETIQUETA: editedData.etiqueta,
-      //           IDVALOR:editedData.valor,
-      //           INFOAD: editedData.info,
-      //           IDGRUPOET: editedData.idgroup,
-      //           ID: editedData.idg,
-      //           ACTIVO: editedData.estado !== false,
-      //           BORRADO: editedData.estado || false
-      //       };
-
       const res = await fetch(url, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload)
       });
 
-      console.log(res);
-      
+      console.log("Payload enviado a UpdateOne:", payload);
 
       const json = await res.json().catch(() => ({}));
 
       if (!res.ok) {
         if (res.status === 409) {
-          MessageBox.error("Ya existe un registro con esos datos. No se puede actualizar.");
+          alert("❌ Ya existe un registro con esa llave compuesta. No se puede actualizar.");
           return;
         }
-        console.log("HTTP " + res.status + (json.messageUSR ? " - " + json.messageUSR : ""));
+        // Para otros errores, lanzamos una excepción para que la capture el catch.
+        throw new Error("Error HTTP " + res.status + (json.messageUSR ? " - " + json.messageUSR : ""));
       }
 
       alert("✅ Cambios guardados correctamente");
@@ -433,6 +423,7 @@ export default function App() {
       // Cuando una fila se expande, inicializamos los datos de edición
       const rowData = data.find(row => row.idg === rowId);
       setEditingRowData(rowData);
+      setOriginalRowData(rowData); // Guardamos la copia original
 
       // Pre-filtrar los catálogos basados en los datos de la fila que se expande
       if (rowData) {
@@ -449,6 +440,7 @@ export default function App() {
     } else {
       // Cuando se colapsa, limpiamos los datos de edición
       setEditingRowData(null);
+      setOriginalRowData(null);
     }
   };
 
@@ -782,7 +774,7 @@ export default function App() {
                               design="Positive"
                               onClick={(e) => {
                                 e.stopPropagation();
-                                handleGuardarCambiosEdicion(editingRowData);
+                                handleGuardarCambiosEdicion(editingRowData, originalRowData);
                                 setExpandedRowId(null); // Cierra la fila después de guardar
                               }}
                             >
