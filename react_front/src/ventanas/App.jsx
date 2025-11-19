@@ -763,7 +763,7 @@ console.log(editingRowData);
         setGrupoET={(newGrupoET) => {
           setEditingRowData(prev => ({ ...prev, idgroup: newGrupoET }));
         }}
-        etiquetas={etiquetasCatalog}
+        etiquetas={etiquetasCatalog} // Pasamos el catálogo completo
         valores={valoresCatalog}
         sociedadSeleccionada={editingRowData?.sociedad}
         cediSeleccionado={editingRowData?.sucursal}
