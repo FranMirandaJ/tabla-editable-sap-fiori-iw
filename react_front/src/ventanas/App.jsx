@@ -34,6 +34,7 @@ import {
   Icon
 } from "@ui5/webcomponents-react";
 import ModalCrear from "../components/ModalCrear";
+import ModalEditGrupoET from "../components/ModalEditGrupoET.jsx";
 import "@ui5/webcomponents-icons/dist/menu.js";
 import "@ui5/webcomponents-icons/dist/home.js";
 import "@ui5/webcomponents-icons/dist/settings.js";
@@ -75,8 +76,7 @@ export default function App() {
   const [filteredEtiquetasCatalog, setFilteredEtiquetasCatalog] = useState([]);
   const [filteredValoresCatalog, setFilteredValoresCatalog] = useState([]);
 
-  const [isModalEditGrupoETOpen, setIsModalEditGrupoETOpen] = useState(false);
-
+console.log(editingRowData);
 
   // --- Cambio de conexión ---
   const handleSwitchChange = () => {
@@ -406,6 +406,8 @@ export default function App() {
     });
   };
 
+  const [isEditGrupoETModalOpen, setIsEditGrupoETModalOpen] = useState(false);
+
   return (
     <>
       {/* 🔹 ShellBar con menú hamburguesa */}
@@ -678,9 +680,16 @@ export default function App() {
                           </ComboBox>
                         </TableCell>
                         <TableCell>
-                          <FlexBox>
-                            <Input name="idgroup" value={editingRowData?.idgroup || ''} onInput={handleEditInputChange} style={{ flexGrow: 1, marginRight: '8px' }} />
-                            <Button icon="edit" design="Transparent" />
+                          <FlexBox direction="Column" style={{ gap: '0.5rem' }}>
+                            <Input name="idgroup" value={editingRowData?.idgroup || ''} disabled style={{ width: '100%' }} />
+                            <Button
+                              icon="edit"
+                              design="Transparent"
+                              onClick={() => setIsEditGrupoETModalOpen(true)}
+                              disabled={!editingRowData?.sociedad || !editingRowData?.sucursal}
+                              title="Editar Grupo ET"
+                              style={{ alignSelf: 'flex-start' }}
+                            />
                           </FlexBox>
                         </TableCell>
                         <TableCell>
@@ -746,6 +755,22 @@ export default function App() {
         dbConnection={dbConnection}
         refetchData={fetchData}
       />
+
+      {/* Modal para editar Grupo ET en la fila */}
+      <ModalEditGrupoET
+        isModalOpen={isEditGrupoETModalOpen}
+        handleCloseModal={() => setIsEditGrupoETModalOpen(false)}
+        setGrupoET={(newGrupoET) => {
+          setEditingRowData(prev => ({ ...prev, idgroup: newGrupoET }));
+        }}
+        etiquetas={etiquetasCatalog}
+        valores={valoresCatalog}
+        sociedadSeleccionada={editingRowData?.sociedad}
+        cediSeleccionado={editingRowData?.sucursal}
+      />
+
+
+
 
       {/* 🔹 Ventana de configuración para cambiar server de BD */}
       {showConfig && (
