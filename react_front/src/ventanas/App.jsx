@@ -46,6 +46,7 @@ import "@ui5/webcomponents-icons/dist/navigation-down-arrow.js";
 import "@ui5/webcomponents-icons/dist/navigation-up-arrow.js";
 
 const URL_BASE = "https://app-restful-sap-cds.onrender.com"; // http://localhost:4004
+const URL_BASE_BACKEND_MIGUEL = "http://localhost:3034";
 
 export default function App() {
   // --- Estados originales ---
@@ -62,6 +63,20 @@ export default function App() {
   const [showConfig, setShowConfig] = useState(false);
   const [dbConnection, setDbConnection] = useState("MongoDB");
   const [dbPost, setDbPost] = useState("MongoDB");
+
+  // --- Estados para ComboBoxes en cascada de la fila expandida ---
+  const [sociedadesCatalog, setSociedadesCatalog] = useState([]);
+  const [cedisCatalog, setCedisCatalog] = useState([]);
+  const [etiquetasCatalog, setEtiquetasCatalog] = useState([]);
+  const [valoresCatalog, setValoresCatalog] = useState([]);
+
+  // Estados para los catálogos filtrados
+  const [filteredCedisCatalog, setFilteredCedisCatalog] = useState([]);
+  const [filteredEtiquetasCatalog, setFilteredEtiquetasCatalog] = useState([]);
+  const [filteredValoresCatalog, setFilteredValoresCatalog] = useState([]);
+
+  const [isModalEditGrupoETOpen, setIsModalEditGrupoETOpen] = useState(false);
+
 
   // --- Cambio de conexión ---
   const handleSwitchChange = () => {
@@ -105,9 +120,116 @@ export default function App() {
     }
   };
 
+  useEffect(() => {
+    const fetchCatalogos = async () => {
+      try {
+        const url = `${URL_BASE_BACKEND_MIGUEL}/api/cat/crudLabelsValues?ProcessType=GetAll&LoggedUser=MIGUELLOPEZ&DBServer=${dbConnection === "Azure" ? "CosmosDB" : "MongoDB"}`;
+        const response = await fetch(url, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            operations: [
+              {
+                collection: "LabelsValues",
+                action: "GETALL",
+                payload: {}
+              }
+            ]
+          }),
+        });
+
+        if (!response.ok) {
+          console.log(`Error HTTP: ${response.status}`);
+        }
+
+        const data = await response.json();
+        const registros = data.data?.[0]?.dataRes || [];
+
+        if (!Array.isArray(registros) || registros.length === 0) {
+          return;
+        }
+
+        const sociedades = [];
+        const cedis = [];
+        const etiquetas = [];
+        const valores = [];
+
+        registros.forEach((item) => {
+          // SOCIEDADES
+          if (item.IDSOCIEDAD && !sociedades.some((s) => s.key === item.IDSOCIEDAD)) {
+            sociedades.push({
+              key: item.IDSOCIEDAD,
+              text: `Sociedad ${item.IDSOCIEDAD}`,
+            });
+          }
+
+          // CEDIS
+          if (
+            item.IDSOCIEDAD &&
+            item.IDCEDI &&
+            !cedis.some((c) => c.key === item.IDCEDI && c.parentSoc === item.IDSOCIEDAD)
+          ) {
+            cedis.push({
+              key: item.IDCEDI,
+              text: `Cedi ${item.IDCEDI}`,
+              parentSoc: item.IDSOCIEDAD,
+            });
+          }
+
+          // ETIQUETAS
+          // Guardar etiqueta COMPLETA en etiquetasAll
+          // ETIQUETAS (IDS reales + conservar COLECCION/SECCION para filtros)
+          if (item.IDETIQUETA && item.IDSOCIEDAD && item.IDCEDI && !etiquetas.some((e) => e.key === item.IDETIQUETA)) {
+            etiquetas.push({
+              key: item.IDETIQUETA,
+              text: item.IDETIQUETA,
+              IDETIQUETA: item.IDETIQUETA,
+              ETIQUETA: item.ETIQUETA,
+              IDSOCIEDAD: item.IDSOCIEDAD,
+              IDCEDI: item.IDCEDI,
+              COLECCION: item.COLECCION || "",
+              SECCION: item.SECCION || "",
+              _raw: item
+            });
+          }
+
+          const etiquetasSimplificadas = etiquetas.map(e => ({
+            key: e.IDETIQUETA,
+            text: e.ETIQUETA || e.IDETIQUETA,
+            IDSOCIEDAD: e.IDSOCIEDAD,
+            IDCEDI: e.IDCEDI
+          }));
+
+          // VALORES anidados
+          if (Array.isArray(item.valores)) {
+            item.valores.forEach((v) => {
+              valores.push({
+                key: v.IDVALOR,     // ID REAL
+                text: v.IDVALOR,
+                IDVALOR: v.IDVALOR,
+                VALOR: v.VALOR,
+                IDSOCIEDAD: v.IDSOCIEDAD,
+                IDCEDI: v.IDCEDI,
+                parentEtiqueta: item.IDETIQUETA
+              });
+            });
+          }
+        });
+
+        setCedisCatalog(cedis);
+        setEtiquetasCatalog(etiquetas);
+        setValoresCatalog(valores);
+        setSociedadesCatalog(sociedades);
+
+      } catch (error) {
+        console.error('Error fetching data:', error);
+      }
+    }
+    fetchCatalogos();
+  }, [dbConnection]);
+
   // Cargar datos del backend
   useEffect(() => {
-
     fetchData();
   }, [dbConnection]);
 
@@ -126,27 +248,6 @@ export default function App() {
   ];
 
   const cerrarModalCreacion = () => setIsModalOpen(false);
-
-  const handleEditarClick = () => {
-    if (!selectedRow) {
-      alert("Selecciona una fila primero");
-      return;
-    }
-
-    // Cargar los datos seleccionados al modal
-    setSociedad(selectedRow.sociedad || "");
-    setSucursal(selectedRow.sucursal || "");
-    setEtiqueta(selectedRow.etiqueta || "");
-    setIdValor(selectedRow.valor || "");
-    setInfoAdicional(selectedRow.info || "");
-    setidGroupEt(selectedRow.idgroup || "");
-    setid(selectedRow.idg || "");
-
-    setIsEditing(true);
-    setIsModalOpen(true);
-
-  };
-
 
   const handleActivar = async () => {
     // Verificar si hay una fila seleccionada
@@ -263,6 +364,19 @@ export default function App() {
       // Cuando una fila se expande, inicializamos los datos de edición
       const rowData = data.find(row => row.idg === rowId);
       setEditingRowData(rowData);
+
+      // Pre-filtrar los catálogos basados en los datos de la fila que se expande
+      if (rowData) {
+        const cedis = cedisCatalog.filter(c => c.parentSoc.toString() === rowData.sociedad.toString());
+        setFilteredCedisCatalog(cedis);
+
+        const etiquetas = etiquetasCatalog.filter(et => et.IDSOCIEDAD?.toString() === rowData.sociedad.toString() && et.IDCEDI?.toString() === rowData.sucursal.toString());
+        setFilteredEtiquetasCatalog(etiquetas);
+
+        const valores = valoresCatalog.filter(v => v.parentEtiqueta === rowData.etiqueta);
+        setFilteredValoresCatalog(valores);
+      }
+
     } else {
       // Cuando se colapsa, limpiamos los datos de edición
       setEditingRowData(null);
@@ -271,8 +385,25 @@ export default function App() {
 
   // Maneja los cambios en los inputs de la fila expandida
   const handleEditInputChange = (e) => {
-    const { name, value } = e.target;
-    setEditingRowData(prev => ({ ...prev, [name]: value }));
+    // Para ComboBox, el valor está en detail.item.text
+    const name = e.target.name;
+    const value = e.detail?.item?.text ?? e.target.value;
+
+    setEditingRowData(prev => {
+      const newState = { ...prev, [name]: value };
+      // Limpiar campos dependientes al cambiar uno de la cascada
+      if (name === 'sociedad') {
+        newState.sucursal = '';
+        newState.etiqueta = '';
+        newState.valor = '';
+      } else if (name === 'sucursal') {
+        newState.etiqueta = '';
+        newState.valor = '';
+      } else if (name === 'etiqueta') {
+        newState.valor = '';
+      }
+      return newState;
+    });
   };
 
   return (
@@ -436,16 +567,115 @@ export default function App() {
                         {/* Celda vacía para el botón de expandir */}
                         <TableCell />
                         <TableCell>
-                          <Input name="sociedad" value={editingRowData?.sociedad || ''} onInput={handleEditInputChange} />
+                          <ComboBox
+                            className="modal-combobox"
+                            value={`Sociedad ${editingRowData.sociedad}`}
+                            onSelectionChange={(e) => {
+                              const selectedItem = e.detail.item;
+                              const selectedKey = selectedItem?.dataset.key;
+                              setEditingRowData(prev => ({
+                                ...prev,
+                                sociedad: selectedKey,
+                                // Limpiar selecciones dependientes
+                                sucursal: "",
+                                etiqueta: "",
+                                valor: "",
+                              }));
+
+                              setFilteredCedisCatalog([]);
+                              setFilteredEtiquetasCatalog([]);
+                              setFilteredValoresCatalog([]);
+                              // Filtrar CEDIS
+                              const filtered = cedisCatalog.filter(c => c.parentSoc.toString() === selectedKey);
+                              setFilteredCedisCatalog(filtered);
+                            }}
+                            placeholder="Selecciona una sociedad"
+                            filter="Contains"
+                            style={{ width: '400px' }}
+                          >
+                            {sociedadesCatalog.map(item =>
+                              <ComboBoxItem key={item.key} data-key={item.key} text={item.text} />
+                            )}
+                          </ComboBox>
                         </TableCell>
                         <TableCell>
-                          <Input name="sucursal" value={editingRowData?.sucursal || ''} onInput={handleEditInputChange} />
+                          <ComboBox
+                            className="modal-combobox"
+                            value={`Cedi ${editingRowData.sucursal}`}
+                            disabled={!editingRowData.sociedad}
+                            onSelectionChange={(e) => {
+                              const selectedItem = e.detail.item;
+                              const selectedKey = selectedItem?.dataset.key;
+                              setEditingRowData(prev => ({
+                                ...prev,
+                                sucursal: selectedKey,
+                                // limpiar selecciones dependientes
+                                etiqueta: "",
+                                valor: "",
+                              }));
+
+                              setFilteredEtiquetasCatalog([]);
+                              setFilteredValoresCatalog([]);
+                              // Filtrar Etiquetas
+                              const filtered = etiquetasCatalog.filter(et => et.IDSOCIEDAD?.toString() === editingRowData.sociedad.toString() && et.IDCEDI?.toString() === selectedKey);
+                              setFilteredEtiquetasCatalog(filtered);
+                            }}
+                            placeholder="Selecciona un CEDI"
+                            filter="Contains"
+                            style={{ width: '400px' }}
+                          >
+                            {filteredCedisCatalog.map(item =>
+                              <ComboBoxItem key={item.key} data-key={item.key} text={item.text} />
+                            )}
+                          </ComboBox>
                         </TableCell>
                         <TableCell>
-                          <Input name="etiqueta" value={editingRowData?.etiqueta || ''} onInput={handleEditInputChange} />
+                          <ComboBox
+                            className="modal-combobox"
+                            value={editingRowData.etiqueta}
+                            disabled={!editingRowData.sucursal}
+                            onSelectionChange={(e) => {
+                              const selectedItem = e.detail.item;
+                              const selectedKey = selectedItem?.dataset.key;
+                              setEditingRowData(prev => ({
+                                ...prev,
+                                etiqueta: selectedKey,
+                                // Limpiar selección dependiente
+                                valor: "",
+                              }));
+
+                              setFilteredValoresCatalog([]);
+                              // Filtrar Valores
+                              const filtered = valoresCatalog.filter(v => v.parentEtiqueta === selectedKey);
+                              setFilteredValoresCatalog(filtered);
+                            }}
+                            placeholder="Selecciona una etiqueta"
+                            filter="Contains"
+                            style={{ width: '400px' }}
+                          >
+                            {filteredEtiquetasCatalog.map(item =>
+                              <ComboBoxItem key={item.key} data-key={item.key} text={item.text} />
+                            )}
+                          </ComboBox>
                         </TableCell>
                         <TableCell>
-                          <Input name="valor" value={editingRowData?.valor || ''} onInput={handleEditInputChange} />
+                          <ComboBox
+                            className="modal-combobox"
+                            value={editingRowData.valor}
+                            disabled={!editingRowData.etiqueta}
+                            onSelectionChange={(e) => {
+                              const selectedItem = e.detail.item;
+                              const selectedKey = selectedItem?.dataset.key;
+                              setEditingRowData(prev => ({ ...prev, valor: selectedKey }));
+                            }}
+                            placeholder="Seleccione un valor"
+                            filter="Contains"
+                            style={{ width: '400px' }}
+                          >
+                            {filteredValoresCatalog.map(item =>
+                              <ComboBoxItem key={item.key} data-key={item.key} text={item.text} />
+                            )}
+                          </ComboBox>
                         </TableCell>
                         <TableCell>
                           <FlexBox>
