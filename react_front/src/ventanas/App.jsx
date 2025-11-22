@@ -3,6 +3,7 @@ import "./css/App.css";
 import "./css/Modal.css";
 import axios from "axios";
 import {
+  Avatar,
   ShellBar,
   Button,
   Input,
@@ -31,20 +32,26 @@ import {
   TableVirtualizer,
   TableSelectionMulti,
   TableSelectionSingle,
-  Icon
+  Icon,
+  Search,
+  SegmentedButton,
+  SegmentedButtonItem
 } from "@ui5/webcomponents-react";
 import ModalCrear from "../components/ModalCrear";
+import ButtonDesign from "@ui5/webcomponents/dist/types/ButtonDesign.js";
 import ModalEditGrupoET from "../components/ModalEditGrupoET.jsx";
+// Importacion de iconos
 import "@ui5/webcomponents-icons/dist/menu.js";
 import "@ui5/webcomponents-icons/dist/home.js";
 import "@ui5/webcomponents-icons/dist/settings.js";
 import "@ui5/webcomponents-icons/dist/database.js";
-// Importacion de iconos
 import "@ui5/webcomponents-icons/dist/edit.js";
-import "@ui5/webcomponents-icons/dist/accept.js";
-import "@ui5/webcomponents-icons/dist/decline.js";
+import "@ui5/webcomponents-icons/dist/show.js";
+import "@ui5/webcomponents-icons/dist/hide.js";
+import "@ui5/webcomponents-icons/dist/refresh.js";
 import "@ui5/webcomponents-icons/dist/navigation-down-arrow.js";
 import "@ui5/webcomponents-icons/dist/navigation-up-arrow.js";
+import "@ui5/webcomponents-icons/dist/filter.js";
 
 const URL_BASE = "https://app-restful-sap-cds.onrender.com"; // http://localhost:4004
 const URL_BASE_BACKEND_MIGUEL = "http://localhost:3034";
@@ -80,9 +87,6 @@ export default function App() {
   // --- Cambio de conexión ---
   const handleSwitchChange = () => {
     setDbConnection(dbConnection === "MongoDB" ? "Azure" : "MongoDB");
-  };
-  const CambioDbPost = () => {
-    setDbPost(dbPost === "MongoDB" ? "Azure" : "MongoDB");
   };
 
   const fetchData = async () => {
@@ -467,13 +471,20 @@ export default function App() {
     });
   };
 
+  const handleRefresh = async () => {
+    console.log("refrescando, falta hacerlo.");
+
+  };
+
   const [isEditGrupoETModalOpen, setIsEditGrupoETModalOpen] = useState(false);
 
   return (
     <>
       {/* 🔹 ShellBar con menú hamburguesa */}
       <ShellBar
-        primaryTitle="CINNALOVERS"
+        primaryTitle="Proyecto final"
+        logo={<img alt="SAP Logo" src="https://ui5.github.io/webcomponents/images/sap-logo-svg.svg" />}
+        profile={<Avatar><img alt="person-placeholder" src="https://ui5.github.io/webcomponents-react/v2/assets/Person-B7wHqdJw.png" /></Avatar>}
         startButton={
           <Button
             icon="menu"
@@ -481,9 +492,6 @@ export default function App() {
             onClick={() => setIsNavOpen(!isNavOpen)}
           />
         }
-        showNotifications
-        showCoPilot
-        showProductSwitch
       />
 
       {/* 🔹 Menú lateral (SideNavigation) */}
@@ -491,9 +499,9 @@ export default function App() {
         <SideNavigation
           style={{
             width: "250px",
-            height: "100vh",
+            height: "90vh",
             position: "fixed",
-            top: "45px",
+            top: "60px",
             left: 0,
             backgroundColor: "#f7f7f7",
             boxShadow: "2px 0 5px rgba(0,0,0,0.1)",
@@ -514,61 +522,100 @@ export default function App() {
         </SideNavigation>
       )}
 
+
+
       {/* 🔹 Contenido original sin modificar */}
       <div
         className="container-principal"
         style={{
+          background: "#F5F6F7",
           marginLeft: isNavOpen ? "260px" : "0",
           transition: "margin-left 0.3s ease",
+          paddingLeft: "20px",
+          paddingRight: "20px"
         }}
       >
-        <h2 className="titulo">Grupos y subgrupos de SKU</h2>
 
-        <div className="barra-controles">
-          <Button
-            className="btn-crear"
-            icon="add"
-            onClick={() => setIsModalOpen(true)}
-          >
-            Crear
-          </Button>
-          {/* <Button
-            className="btn-editar"
-            icon="edit"
-            onClick={handleEditarClick}
-            disabled={true}
-          >
-            Editar
-          </Button> */}
-          <Button
-            className="btn-eliminar"
-            icon="delete"
-            onClick={handleEliminarClick}
-            disabled={!selectedRow}
-          >
-            Eliminar
-          </Button>
-          <Button
-            className="btn-desactivar"
-            icon="decline"
-            onClick={handleDesactivar}
-            disabled={!selectedRow || !selectedRow.estado}
-          >
-            Desactivar
-          </Button>
-          <Button
-            className="btn-activar"
-            icon="accept"
-            onClick={handleActivar}
-            disabled={!selectedRow || selectedRow.estado}
-          >
-            Activar
-          </Button>
-          <div className="search-bar">
-            <Input
+        <h1 style={{ paddingTop: "10px", fontFamily: "system-ui" }}>Grupos y subgrupos de SKU</h1>
+
+        <div className="barra-controles" style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "20px" }}>
+          <div style={{ display: "flex", gap: 10 }}>
+            <Button
+              className="btn-crear"
+              icon="add"
+              design={ButtonDesign.Positive}
+              onClick={() => setIsModalOpen(true)}
+            >
+              Crear
+            </Button>
+            <Button
+              className="btn-eliminar"
+              icon="delete"
+              design={ButtonDesign.Negative}
+              onClick={handleEliminarClick}
+              disabled={!selectedRow}
+            >
+              Eliminar
+            </Button>
+            <Button
+              className="btn-desactivar"
+              icon="hide"
+              design={ButtonDesign.Attention}
+              onClick={handleDesactivar}
+              disabled={!selectedRow || !selectedRow.estado}
+            >
+              Desactivar
+            </Button>
+            <Button
+              className="btn-activar"
+              icon="show"
+              design={ButtonDesign.Positive}
+              onClick={handleActivar}
+              disabled={!selectedRow || selectedRow.estado}
+            >
+              Activar
+            </Button>
+            <Button
+              className="btn-refresh"
+              icon="refresh"
+              design={ButtonDesign.Default}
+              onClick={handleRefresh}
+            >
+              Refrescar
+            </Button>
+          </div>
+
+          <div className="search-bar" style={{display: "flex", gap: 10}}>
+            <Search
               placeholder="Buscar..."
-              icon="search"
-              className="search-input"
+              onClose={() => { }}
+              onInput={() => { }}
+              onOpen={() => { }}
+              onScopeChange={() => { }}
+              onSearch={() => { }}
+            />
+
+            <SegmentedButton
+              onSelectionChange={() => { }}
+            >
+              <>
+                <SegmentedButtonItem>
+                  Todos
+                </SegmentedButtonItem>
+                <SegmentedButtonItem>
+                  Activos
+                </SegmentedButtonItem>
+                <SegmentedButtonItem>
+                  Inactivos
+                </SegmentedButtonItem>
+              </>
+            </SegmentedButton>
+
+            <Button
+              className="btn-filter"
+              icon="filter"
+              design={ButtonDesign.Default}
+              onClick={handleRefresh}
             />
           </div>
         </div>
