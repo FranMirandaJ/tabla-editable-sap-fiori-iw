@@ -61,7 +61,7 @@ const ModalEditGrupoET = ({ isModalOpen, handleCloseModal, setGrupoET, etiquetas
             onAfterClose={handleCerrar} // Limpia el estado al cerrar
             headerText="Definir Grupo ET"
             style={{
-                width: "500px",  // o el ancho que prefieras
+                width: "450px",  // o el ancho que prefieras
                 maxWidth: "90vw" // mantiene responsive
             }}
             footer={
@@ -93,7 +93,7 @@ const ModalEditGrupoET = ({ isModalOpen, handleCloseModal, setGrupoET, etiquetas
                     className="modal-form-fields"
                     style={{ gap: '1rem', width: '100%' }}
                 >
-                    <div className="modal-field">
+                    <div className="form-field">
                         <Label required>Grupo ET - Etiqueta</Label>
                         <ComboBox
                             className="modal-combobox"
@@ -116,7 +116,7 @@ const ModalEditGrupoET = ({ isModalOpen, handleCloseModal, setGrupoET, etiquetas
                             )}
                         </ComboBox>
                     </div>
-                    <div className="modal-field">
+                    <div className="form-field">
                         <Label required>Grupo ET - Valor</Label>
                         <ComboBox
                             disabled={!etiqueta}

@@ -10,9 +10,9 @@ import {
     ComboBoxItem,
     TextArea,
     FlexBox,
-    Icon,
 } from "@ui5/webcomponents-react";
 import ModalEditGrupoET from "./ModalEditGrupoET.jsx";
+import ButtonDesign from "@ui5/webcomponents/dist/types/ButtonDesign.js";
 
 // Constantes para consultar el backend del equipo de miguellopez corriendo en localhost
 const URL_BASE_BACKEND_MIGUEL = "http://localhost:3034";
@@ -232,7 +232,7 @@ const ModalCrear = ({ isModalOpen, handleCloseModal, dbConnection, refetchData }
                 onAfterClose={handleCancelar}
                 headerText="Registro"
                 style={{
-                    width: "600px",  // o el ancho que prefieras
+                    width: "450px",  // o el ancho que prefieras
                     maxWidth: "90vw" // mantiene responsive
                 }}
                 footer={
@@ -240,8 +240,7 @@ const ModalCrear = ({ isModalOpen, handleCloseModal, dbConnection, refetchData }
                         endContent={
                             <>
                                 <Button
-                                    design="Emphasized"
-                                    icon="add"
+                                    design={ButtonDesign.Emphasized}
                                     onClick={handleGuardar}
                                     className="btn-guardar-modal"
                                 >
@@ -265,8 +264,8 @@ const ModalCrear = ({ isModalOpen, handleCloseModal, dbConnection, refetchData }
                         className="modal-form-fields"
                         style={{ gap: '1rem', width: '100%' }}
                     >
-                        <div className="modal-field">
-                            <Label required>Sociedad</Label>
+                        <div className="form-field">
+                            <Label required>Sociedad:</Label>
                             <ComboBox
                                 className="modal-combobox"
                                 value={sociedad ? `Sociedad ${sociedad}` : ""}
@@ -295,8 +294,8 @@ const ModalCrear = ({ isModalOpen, handleCloseModal, dbConnection, refetchData }
                             </ComboBox>
                         </div>
 
-                        <div className="modal-field">
-                            <Label required>CEDI</Label>
+                        <div className="form-field">
+                            <Label required>CEDI:</Label>
                             <ComboBox
                                 className="modal-combobox"
                                 value={cedis ? `Cedi ${cedis}` : ""}
@@ -324,8 +323,8 @@ const ModalCrear = ({ isModalOpen, handleCloseModal, dbConnection, refetchData }
                             </ComboBox>
                         </div>
 
-                        <div className="modal-field">
-                            <Label required>Etiqueta</Label>
+                        <div className="form-field">
+                            <Label required>Etiqueta:</Label>
                             <ComboBox
                                 className="modal-combobox"
                                 value={etiqueta}
@@ -351,8 +350,8 @@ const ModalCrear = ({ isModalOpen, handleCloseModal, dbConnection, refetchData }
                             </ComboBox>
                         </div>
 
-                        <div className="modal-field">
-                            <Label required>Valor</Label>
+                        <div className="form-field">
+                            <Label required>Valor:</Label>
                             <ComboBox
                                 className="modal-combobox"
                                 value={valor}
@@ -373,9 +372,9 @@ const ModalCrear = ({ isModalOpen, handleCloseModal, dbConnection, refetchData }
                             </ComboBox>
                         </div>
 
-                        <div className="modal-field">
-                            <Label required>Grupo ET</Label>
-                            <div className="grupo-et-container">
+                        <div className="form-field" style={{ width: "400px" }}>
+                            <Label required>Grupo ET:</Label>
+                            <div style={{ display: "flex", alignItems: "center", gap: 6 }} >
                                 <Input
                                     icon={null}
                                     type="Text"
@@ -393,7 +392,7 @@ const ModalCrear = ({ isModalOpen, handleCloseModal, dbConnection, refetchData }
                         </div>
 
                         <div className="modal-field">
-                            <Label required>ID</Label>
+                            <Label required>ID:</Label>
                             <Input
                                 className="modal-input"
                                 value={id}
@@ -402,18 +401,20 @@ const ModalCrear = ({ isModalOpen, handleCloseModal, dbConnection, refetchData }
                                 style={{ width: '400px' }}
                             />
                         </div>
+
+                        <div className="modal-field">
+                            <Label className="textarea-label">Información adicional:</Label>
+                            <TextArea
+                                placeholder="Escriba información adicional..."
+                                className="modal-textarea"
+                                onChange={(e) => setInfoAdicional(e.target.value)}
+                                value={infoAdicional}
+                                style={{ width: '400px' }}
+                            />
+                        </div>
                     </FlexBox>
 
-                    <div className="modal-field">
-                        <Label className="textarea-label">Información adicional</Label>
-                        <TextArea
-                            placeholder="Escriba información adicional..."
-                            className="modal-textarea"
-                            onChange={(e) => setInfoAdicional(e.target.value)}
-                            value={infoAdicional}
-                            style={{ width: '400px' }}
-                        />
-                    </div>
+
                 </div>
             </Dialog>
             <ModalEditGrupoET
