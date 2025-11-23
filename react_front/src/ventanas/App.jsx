@@ -7,9 +7,7 @@ import {
   ShellBar,
   Button,
   Input,
-  AnalyticalTable,
   Dialog,
-  Bar,
   Label,
   ComboBox,
   ComboBoxItem,
@@ -17,25 +15,17 @@ import {
   FlexBox,
   SideNavigation,
   SideNavigationItem,
-  SideNavigationSubItem,
   Switch,
-  Table,
-  TableRow,
-  TableCell,
-  TableRowAction,
-  TableRowActionNavigation,
-  TableHeaderRow,
-  TableHeaderCell,
-  TableHeaderCellActionAI,
-  TableGrowing,
-  TableSelection,
-  TableVirtualizer,
-  TableSelectionMulti,
-  TableSelectionSingle,
   Icon,
   Search,
   SegmentedButton,
-  SegmentedButtonItem
+  SegmentedButtonItem,
+  Table,
+  TableHeaderRow,
+  TableHeaderCell,
+  TableRow,
+  TableCell,
+
 } from "@ui5/webcomponents-react";
 import ModalCrear from "../components/ModalCrear";
 import ButtonDesign from "@ui5/webcomponents/dist/types/ButtonDesign.js";
@@ -52,9 +42,17 @@ import "@ui5/webcomponents-icons/dist/refresh.js";
 import "@ui5/webcomponents-icons/dist/navigation-down-arrow.js";
 import "@ui5/webcomponents-icons/dist/navigation-up-arrow.js";
 import "@ui5/webcomponents-icons/dist/filter.js";
+import "@ui5/webcomponents-icons/dist/accept.js";
+import "@ui5/webcomponents-icons/dist/decline.js";
 
 const URL_BASE = "https://app-restful-sap-cds.onrender.com"; // http://localhost:4004
 const URL_BASE_BACKEND_MIGUEL = "http://localhost:3034";
+
+const WrapCell = ({ cell }) => (
+  <div style={{ whiteSpace: "normal", wordWrap: "break-word", lineHeight: "1.3" }}>
+    {cell.value}
+  </div>
+);
 
 export default function App() {
   // --- Estados originales ---
@@ -62,6 +60,7 @@ export default function App() {
   const [data, setData] = useState([]);
   const [loading, setLoading] = useState(true);
   const [selectedRow, setSelectedRow] = useState(null);
+  const [clickedRow, setClickedRow] = useState(null);
   const [isEditing, setIsEditing] = useState(false);
   const [expandedRowId, setExpandedRowId] = useState(null);
   const [editingRowData, setEditingRowData] = useState(null);
@@ -110,18 +109,21 @@ export default function App() {
           info: item.INFOAD,
           registro: `${item.FECHAREG} ${item.HORAREG} (${item.USUARIOREG})`,
           ultMod: !item.FECHAULTMOD ? "Sin modificaciones" : `${item.FECHAULTMOD} ${item.HORAULTMOD} (${item.USUARIOMOD})`,
-          estado: item.ACTIVO,
+          estado: item.ACTIVO
         })) || [];
 
-      //console.log("Datos obtenidos:", records);
-
       setData(records);
+
     } catch (error) {
       console.error("Error al obtener datos:", error);
     } finally {
       setLoading(false);
     }
   };
+  // Cargar datos del backend
+  useEffect(() => {
+    fetchData();
+  }, [dbConnection]);
 
   useEffect(() => {
     const fetchCatalogos = async () => {
@@ -140,10 +142,6 @@ export default function App() {
             ]
           }),
         });
-
-        if (!response.ok) {
-          console.log(`Error HTTP: ${response.status}`);
-        }
 
         const data = await response.json();
         const registros = data.data?.[0]?.dataRes || [];
@@ -226,32 +224,72 @@ export default function App() {
 
       } catch (error) {
         console.error('Error fetching data:', error);
+        setCedisCatalog([]);
+        setEtiquetasCatalog([]);
+        setValoresCatalog([]);
+        setSociedadesCatalog([]);
       }
     }
     fetchCatalogos();
   }, [dbConnection]);
 
-  // Cargar datos del backend
-  useEffect(() => {
-    fetchData();
-  }, [dbConnection]);
-
   const columns = [
-    { Header: "", accessor: "expand" },
-    { Header: "Sociedad", accessor: "sociedad" },
-    { Header: "Sucursal (CEDIS)", accessor: "sucursal" },
-    { Header: "Etiqueta", accessor: "etiqueta" },
-    { Header: "Valor", accessor: "valor" },
-    { Header: "Grupo Etiqueta", accessor: "idgroup" },
-    { Header: "ID", accessor: "idg" },
-    { Header: "Información adicional", accessor: "info" },
-    { Header: "Registro", accessor: "registro" },
-    { Header: "Última modificación", accessor: "ultMod" },
-    { Header: "Estado", accessor: "estado" },
+    {
+      accessor: "expand",
+      disableFilters: true,
+      disableSortBy: true,
+      disableGroupBy: true,
+      disableResizing: true,
+      width: 50,
+      Cell: ({ row }) => {
+        const renglon = row.original;
+        return (
+          <FlexBox justifyContent="Start" alignItems="Center" style={{ width: "100%", height: "100%" }}>
+            <Button
+              icon={isSameRow(expandedRowId, renglon) ? "navigation-up-arrow" : "navigation-down-arrow"}
+              design="Transparent"
+              onClick={() => handleToggleExpand({
+                sociedad: renglon.sociedad,
+                sucursal: renglon.sucursal,
+                etiqueta: renglon.etiqueta,
+                valor: renglon.valor,
+                idg: renglon.idg
+              })}
+            />
+          </FlexBox>
+        )
+      }
+
+    },
+    { Header: "Sociedad", accessor: "sociedad", Cell: WrapCell },
+    { Header: "Sucursal (CEDIS)", accessor: "sucursal", Cell: WrapCell },
+    { Header: "Etiqueta", accessor: "etiqueta", Cell: WrapCell },
+    { Header: "Valor", accessor: "valor", Cell: WrapCell },
+    { Header: "Grupo Etiqueta", accessor: "idgroup", Cell: WrapCell },
+    { Header: "ID", accessor: "idg", Cell: WrapCell },
+    { Header: "Información adicional", accessor: "info", Cell: WrapCell },
+    { Header: "Registro", accessor: "registro", Cell: WrapCell },
+    { Header: "Última modificación", accessor: "ultMod", Cell: WrapCell },
+    {
+      Header: "Estado",
+      accessor: "estado",
+      hAlign: "Center",
+      Cell: ({ cell }) => {
+        const isActivo = cell.value;
+        return (
+          <FlexBox justifyContent="Center" alignItems="Center" style={{ width: "100%", height: "100%" }}>
+            <Icon
+              name={isActivo ? "accept" : "decline"}
+              style={{
+                backgroundColor: isActivo ? "var(--sapPositiveColor, #107e3e)" : "var(--sapNegativeColor, #b00)", color: "white", borderRadius: "50%", padding: "3px", width: "12px", height: "12px", boxShadow: "0 1px 2px rgba(0,0,0,0.2)"
+              }}
+            />
+          </FlexBox>
+        );
+      }
+    },
   ];
-
-  const cerrarModalCreacion = () => setIsModalOpen(false);
-
+  
   const handleGuardarCambiosEdicion = async (editedData, originalData) => {
     if (!editedData.sociedad || !editedData.sucursal || !editedData.etiqueta || !editedData.valor || !editedData.idgroup || !editedData.idg) {
       alert("Completa Sociedad, CEDI, Etiqueta, Valor, Grupo Etiqueta y ID.");
@@ -407,42 +445,69 @@ export default function App() {
     }
   };
 
-  //console.log("Registros cargados:", data.length, data);
 
-  const handleRowClick = (row) => {
-    // Si la fila clickeada es la misma que ya está seleccionada, deseleccionar
-    if (selectedRow === row) {
-      setSelectedRow(null);
-    } else {
-      // Si no, seleccionar la nueva fila
-      setSelectedRow(row);
-    }
+  // Agrega un handler para las selecciones (checkboxes):
+  const handleRowSelect = (e) => {
+    // allRows es una array que contiene todos los renglones de la tabla
+    // la info del renglon se encuentra en original, y el id es el indice de la columna del arreglo, o el orden en que se muestra en la tabla
+    const allRows = e.detail.rowsById;
+    // objeto de tipo {0: true, 1: true} según el indice de row que esta seleccionado
+    const rowsSelected = e.detail.selectedRowIds;
+
+    const selectedRowsData = Object.keys(rowsSelected)
+      .filter(rowId => rowsSelected[rowId] === true) // Solo los que son true
+      .map(rowId => allRows[rowId].original);
+
+    setSelectedRow(selectedRowsData);
   };
 
-  const handleToggleExpand = (rowId) => {
-    const newExpandedRowId = expandedRowId === rowId ? null : rowId;
+  const isSameRow = (row1, row2) => {
+    if (!row1 || !row2) return false;
+
+    return (
+      row1.sociedad === row2.sociedad &&
+      row1.sucursal === row2.sucursal &&
+      row1.etiqueta === row2.etiqueta &&
+      row1.valor === row2.valor &&
+      row1.idg === row2.idg
+    );
+  };
+
+  const handleToggleExpand = (rowKey) => {
+    // rowKey ya es el objeto con {sociedad, sucursal, etiqueta, valor, idg}
+
+    // Comparar si es la misma fila
+    const isSame = isSameRow(expandedRowId, rowKey);
+    const newExpandedRowId = isSame ? null : rowKey;
+
     setExpandedRowId(newExpandedRowId);
 
     if (newExpandedRowId) {
-      // Cuando una fila se expande, inicializamos los datos de edición
-      const rowData = data.find(row => row.idg === rowId);
-      setEditingRowData(rowData);
-      setOriginalRowData(rowData); // Guardamos la copia original
+      // Buscar la fila completa en data usando idg
+      const rowData = data.find(row => row.idg === rowKey.idg);
 
-      // Pre-filtrar los catálogos basados en los datos de la fila que se expande
-      if (rowData) {
-        const cedis = cedisCatalog.filter(c => c.parentSoc.toString() === rowData.sociedad.toString());
-        setFilteredCedisCatalog(cedis);
+      if (!rowData) return;
 
-        const etiquetas = etiquetasCatalog.filter(et => et.IDSOCIEDAD?.toString() === rowData.sociedad.toString() && et.IDCEDI?.toString() === rowData.sucursal.toString());
-        setFilteredEtiquetasCatalog(etiquetas);
+      setEditingRowData({ ...rowData });
+      setOriginalRowData({ ...rowData });
 
-        const valores = valoresCatalog.filter(v => v.parentEtiqueta === rowData.etiqueta);
-        setFilteredValoresCatalog(valores);
-      }
+      // Pre-filtrar catálogos
+      const cedis = cedisCatalog.filter(c =>
+        c.parentSoc.toString() === rowData.sociedad.toString()
+      );
+      setFilteredCedisCatalog(cedis);
 
+      const etiquetas = etiquetasCatalog.filter(et =>
+        et.IDSOCIEDAD?.toString() === rowData.sociedad.toString() &&
+        et.IDCEDI?.toString() === rowData.sucursal.toString()
+      );
+      setFilteredEtiquetasCatalog(etiquetas);
+
+      const valores = valoresCatalog.filter(v =>
+        v.parentEtiqueta === rowData.etiqueta
+      );
+      setFilteredValoresCatalog(valores);
     } else {
-      // Cuando se colapsa, limpiamos los datos de edición
       setEditingRowData(null);
       setOriginalRowData(null);
     }
@@ -585,7 +650,7 @@ export default function App() {
             </Button>
           </div>
 
-          <div className="search-bar" style={{display: "flex", gap: 10}}>
+          <div className="search-bar" style={{ display: "flex", gap: 10 }}>
             <Search
               placeholder="Buscar..."
               onClose={() => { }}
@@ -620,250 +685,251 @@ export default function App() {
           </div>
         </div>
 
-        <div className="tabla-fondo" style={{ cursor: "pointer" }}>
-          {loading ? (
-            <p className="loading-msg">Cargando datos...</p>
-          ) : data.length > 0 ? (
-            <Table
-              headerRow={
-                <TableHeaderRow sticky>
-                  {columns.map((column, index) => (
-                    <TableHeaderCell key={index}>{column.Header}</TableHeaderCell>
-                  ))}
-                </TableHeaderRow>
-              }
-              onRowClick={(ev) => {
-                const r = ev?.row?.original ?? ev?.detail?.row?.original ?? null;
-                if (r) setSelectedRow(r);
-              }}
-            >
-              {data.map((row) => {
-                const isExpanded = expandedRowId === row.idg;
-                return (
-                  <React.Fragment key={row.idg}>
-                    <TableRow
-                      selected={selectedRow === row}
-                      onClick={() => handleRowClick(row)}
-                    >
-                      <TableCell>
+        <Table
+          headerRow={
+            <TableHeaderRow sticky>
+              {columns.map((column, index) => (
+                <TableHeaderCell key={index}>{column.Header}</TableHeaderCell>
+              ))}
+            </TableHeaderRow>
+          }
+          onRowClick={(ev) => {
+            const r = ev?.row?.original ?? ev?.detail?.row?.original ?? null;
+            if (r) setSelectedRow(r);
+          }}
+        >
+          {data.map((row) => {
+            const isExpanded = isSameRow(expandedRowId, row);
+            return (
+              <React.Fragment key={`${row.sociedad}|${row.sucursal}|${row.etiqueta}|${row.valor}|${row.idgroup}|${row.idg}`}>
+                <TableRow
+                  selected={selectedRow === row}
+                  onClick={() => setClickedRow(row)}
+                >
+                  <TableCell>
+                    <Button
+                      icon={isExpanded ? "navigation-up-arrow" : "navigation-down-arrow"}
+                      design="Transparent"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleToggleExpand({
+                          sociedad: row.sociedad,
+                          sucursal: row.sucursal,
+                          etiqueta: row.etiqueta,
+                          valor: row.valor,
+                          idgroup: row.idgroup,
+                          idg: row.idg
+                        });
+                      }}
+                    />
+                  </TableCell>
+                  <TableCell><span>{row.sociedad}</span></TableCell>
+                  <TableCell><span>{row.sucursal}</span></TableCell>
+                  <TableCell><span>{row.etiqueta}</span></TableCell>
+                  <TableCell><span>{row.valor}</span></TableCell>
+                  <TableCell><span>{row.idgroup}</span></TableCell>
+                  <TableCell><span>{row.idg}</span></TableCell>
+                  <TableCell><span>{row.info}</span></TableCell>
+                  <TableCell><span>{row.registro}</span></TableCell>
+                  <TableCell><span>{row.ultMod}</span></TableCell>
+                  <TableCell>
+                    <Icon
+                      name={row.estado ? "accept" : "decline"}
+                      style={{
+                        backgroundColor: row.estado ? "var(--sapPositiveColor, #107e3e)" : "var(--sapNegativeColor, #b00)", color: "white", borderRadius: "50%", padding: "3px", width: "12px", height: "12px", boxShadow: "0 1px 2px rgba(0,0,0,0.2)"
+                      }}
+                    />
+                  </TableCell>
+                </TableRow>
+                {isExpanded && (
+                  <TableRow className="expanded-row">
+                    {/* Celda vacía para el botón de expandir */}
+                    <TableCell />
+                    <TableCell>
+                      <ComboBox
+                        className="modal-combobox"
+                        value={`Sociedad ${editingRowData.sociedad}`}
+                        onSelectionChange={(e) => {
+                          const selectedItem = e.detail.item;
+                          const selectedKey = selectedItem?.dataset.key;
+                          setEditingRowData(prev => ({
+                            ...prev,
+                            sociedad: selectedKey,
+                            // Limpiar selecciones dependientes
+                            sucursal: "",
+                            etiqueta: "",
+                            valor: "",
+                          }));
+
+                          setFilteredCedisCatalog([]);
+                          setFilteredEtiquetasCatalog([]);
+                          setFilteredValoresCatalog([]);
+                          // Filtrar CEDIS
+                          const filtered = cedisCatalog.filter(c => c.parentSoc.toString() === selectedKey);
+                          setFilteredCedisCatalog(filtered);
+                        }}
+                        placeholder="Selecciona una sociedad"
+                        filter="Contains"
+                        style={{ width: '400px' }}
+                      >
+                        {sociedadesCatalog.map(item =>
+                          <ComboBoxItem key={item.key} data-key={item.key} text={item.text} />
+                        )}
+                      </ComboBox>
+                    </TableCell>
+                    <TableCell>
+                      <ComboBox
+                        className="modal-combobox"
+                        value={`Cedi ${editingRowData.sucursal}`}
+                        disabled={!editingRowData.sociedad}
+                        onSelectionChange={(e) => {
+                          const selectedItem = e.detail.item;
+                          const selectedKey = selectedItem?.dataset.key;
+                          setEditingRowData(prev => ({
+                            ...prev,
+                            sucursal: selectedKey,
+                            // limpiar selecciones dependientes
+                            etiqueta: "",
+                            valor: "",
+                          }));
+
+                          setFilteredEtiquetasCatalog([]);
+                          setFilteredValoresCatalog([]);
+                          // Filtrar Etiquetas
+                          const filtered = etiquetasCatalog.filter(et => et.IDSOCIEDAD?.toString() === editingRowData.sociedad.toString() && et.IDCEDI?.toString() === selectedKey);
+                          setFilteredEtiquetasCatalog(filtered);
+                        }}
+                        placeholder="Selecciona un CEDI"
+                        filter="Contains"
+                        style={{ width: '400px' }}
+                      >
+                        {filteredCedisCatalog.map(item =>
+                          <ComboBoxItem key={item.key} data-key={item.key} text={item.text} />
+                        )}
+                      </ComboBox>
+                    </TableCell>
+                    <TableCell>
+                      <ComboBox
+                        className="modal-combobox"
+                        value={editingRowData.etiqueta}
+                        disabled={!editingRowData.sucursal}
+                        onSelectionChange={(e) => {
+                          const selectedItem = e.detail.item;
+                          const selectedKey = selectedItem?.dataset.key;
+                          setEditingRowData(prev => ({
+                            ...prev,
+                            etiqueta: selectedKey,
+                            // Limpiar selección dependiente
+                            valor: "",
+                          }));
+
+                          setFilteredValoresCatalog([]);
+                          // Filtrar Valores
+                          const filtered = valoresCatalog.filter(v => v.parentEtiqueta === selectedKey);
+                          setFilteredValoresCatalog(filtered);
+                        }}
+                        placeholder="Selecciona una etiqueta"
+                        filter="Contains"
+                        style={{ width: '400px' }}
+                      >
+                        {filteredEtiquetasCatalog.map(item =>
+                          <ComboBoxItem key={item.key} data-key={item.key} text={item.text} />
+                        )}
+                      </ComboBox>
+                    </TableCell>
+                    <TableCell>
+                      <ComboBox
+                        className="modal-combobox"
+                        value={editingRowData.valor}
+                        disabled={!editingRowData.etiqueta}
+                        onSelectionChange={(e) => {
+                          const selectedItem = e.detail.item;
+                          const selectedKey = selectedItem?.dataset.key;
+                          setEditingRowData(prev => ({ ...prev, valor: selectedKey }));
+                        }}
+                        placeholder="Seleccione un valor"
+                        filter="Contains"
+                        style={{ width: '400px' }}
+                      >
+                        {filteredValoresCatalog.map(item =>
+                          <ComboBoxItem key={item.key} data-key={item.key} text={item.text} />
+                        )}
+                      </ComboBox>
+                    </TableCell>
+                    <TableCell>
+                      <FlexBox direction="Column" style={{ gap: '0.5rem' }}>
+                        <Input name="idgroup" value={editingRowData?.idgroup || ''} disabled style={{ width: '100%' }} />
                         <Button
-                          icon={isExpanded ? "navigation-up-arrow" : "navigation-down-arrow"}
+                          icon="edit"
                           design="Transparent"
+                          onClick={() => setIsEditGrupoETModalOpen(true)}
+                          disabled={!editingRowData?.sociedad || !editingRowData?.sucursal}
+                          title="Editar Grupo ET"
+                          style={{ alignSelf: 'flex-start' }}
+                        />
+                      </FlexBox>
+                    </TableCell>
+                    <TableCell>
+                      <Input name="idg" value={editingRowData?.idg || ''} onInput={handleEditInputChange} />
+                    </TableCell>
+                    <TableCell>
+                      <Input name="info" value={editingRowData?.info || ''} onInput={handleEditInputChange} />
+                    </TableCell>
+                    <TableCell>
+                      {/* El registro generalmente no es editable */}
+                      <span>{row.registro}</span>
+                    </TableCell>
+                    <TableCell>
+                      {/* La última modificación no es editable */}
+                      <span>{row.ultMod}</span>
+                    </TableCell>
+                    <TableCell>
+                      <FlexBox direction="Column" style={{ gap: '0.5rem' }}>
+                        <Button
+                          icon="accept"
+                          design="Positive"
                           onClick={(e) => {
                             e.stopPropagation();
-                            handleToggleExpand(row.idg);
+                            handleGuardarCambiosEdicion(editingRowData, originalRowData);
+                            setExpandedRowId(null); // Cierra la fila después de guardar
                           }}
-                        />
-                      </TableCell>
-                      <TableCell><span>{row.sociedad}</span></TableCell>
-                      <TableCell><span>{row.sucursal}</span></TableCell>
-                      <TableCell><span>{row.etiqueta}</span></TableCell>
-                      <TableCell><span>{row.valor}</span></TableCell>
-                      <TableCell><span>{row.idgroup}</span></TableCell>
-                      <TableCell><span>{row.idg}</span></TableCell>
-                      <TableCell><span>{row.info}</span></TableCell>
-                      <TableCell><span>{row.registro}</span></TableCell>
-                      <TableCell><span>{row.ultMod}</span></TableCell>
-                      <TableCell>
-                        {row.estado ? (
-                          <Icon name="accept" style={{ color: "green" }} title="Activo" />
-                        ) : (
-                          <Icon name="decline" style={{ color: "red" }} title="Inactivo" />
-                        )}
-                      </TableCell>
-                    </TableRow>
-                    {isExpanded && (
-                      <TableRow className="expanded-row">
-                        {/* Celda vacía para el botón de expandir */}
-                        <TableCell />
-                        <TableCell>
-                          <ComboBox
-                            className="modal-combobox"
-                            value={`Sociedad ${editingRowData.sociedad}`}
-                            onSelectionChange={(e) => {
-                              const selectedItem = e.detail.item;
-                              const selectedKey = selectedItem?.dataset.key;
-                              setEditingRowData(prev => ({
-                                ...prev,
-                                sociedad: selectedKey,
-                                // Limpiar selecciones dependientes
-                                sucursal: "",
-                                etiqueta: "",
-                                valor: "",
-                              }));
+                        >
+                          Guardar
+                        </Button>
+                        <Button
+                          icon="decline"
+                          design="Negative"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setExpandedRowId(null); // Simplemente cierra la fila
+                            setEditingRowData(null);
+                          }}
+                        >
+                          Cancelar
+                        </Button>
+                      </FlexBox>
+                    </TableCell>
+                  </TableRow>
+                )}
+              </React.Fragment>
+            );
+          })}
+        </Table>
 
-                              setFilteredCedisCatalog([]);
-                              setFilteredEtiquetasCatalog([]);
-                              setFilteredValoresCatalog([]);
-                              // Filtrar CEDIS
-                              const filtered = cedisCatalog.filter(c => c.parentSoc.toString() === selectedKey);
-                              setFilteredCedisCatalog(filtered);
-                            }}
-                            placeholder="Selecciona una sociedad"
-                            filter="Contains"
-                            style={{ width: '400px' }}
-                          >
-                            {sociedadesCatalog.map(item =>
-                              <ComboBoxItem key={item.key} data-key={item.key} text={item.text} />
-                            )}
-                          </ComboBox>
-                        </TableCell>
-                        <TableCell>
-                          <ComboBox
-                            className="modal-combobox"
-                            value={`Cedi ${editingRowData.sucursal}`}
-                            disabled={!editingRowData.sociedad}
-                            onSelectionChange={(e) => {
-                              const selectedItem = e.detail.item;
-                              const selectedKey = selectedItem?.dataset.key;
-                              setEditingRowData(prev => ({
-                                ...prev,
-                                sucursal: selectedKey,
-                                // limpiar selecciones dependientes
-                                etiqueta: "",
-                                valor: "",
-                              }));
-
-                              setFilteredEtiquetasCatalog([]);
-                              setFilteredValoresCatalog([]);
-                              // Filtrar Etiquetas
-                              const filtered = etiquetasCatalog.filter(et => et.IDSOCIEDAD?.toString() === editingRowData.sociedad.toString() && et.IDCEDI?.toString() === selectedKey);
-                              setFilteredEtiquetasCatalog(filtered);
-                            }}
-                            placeholder="Selecciona un CEDI"
-                            filter="Contains"
-                            style={{ width: '400px' }}
-                          >
-                            {filteredCedisCatalog.map(item =>
-                              <ComboBoxItem key={item.key} data-key={item.key} text={item.text} />
-                            )}
-                          </ComboBox>
-                        </TableCell>
-                        <TableCell>
-                          <ComboBox
-                            className="modal-combobox"
-                            value={editingRowData.etiqueta}
-                            disabled={!editingRowData.sucursal}
-                            onSelectionChange={(e) => {
-                              const selectedItem = e.detail.item;
-                              const selectedKey = selectedItem?.dataset.key;
-                              setEditingRowData(prev => ({
-                                ...prev,
-                                etiqueta: selectedKey,
-                                // Limpiar selección dependiente
-                                valor: "",
-                              }));
-
-                              setFilteredValoresCatalog([]);
-                              // Filtrar Valores
-                              const filtered = valoresCatalog.filter(v => v.parentEtiqueta === selectedKey);
-                              setFilteredValoresCatalog(filtered);
-                            }}
-                            placeholder="Selecciona una etiqueta"
-                            filter="Contains"
-                            style={{ width: '400px' }}
-                          >
-                            {filteredEtiquetasCatalog.map(item =>
-                              <ComboBoxItem key={item.key} data-key={item.key} text={item.text} />
-                            )}
-                          </ComboBox>
-                        </TableCell>
-                        <TableCell>
-                          <ComboBox
-                            className="modal-combobox"
-                            value={editingRowData.valor}
-                            disabled={!editingRowData.etiqueta}
-                            onSelectionChange={(e) => {
-                              const selectedItem = e.detail.item;
-                              const selectedKey = selectedItem?.dataset.key;
-                              setEditingRowData(prev => ({ ...prev, valor: selectedKey }));
-                            }}
-                            placeholder="Seleccione un valor"
-                            filter="Contains"
-                            style={{ width: '400px' }}
-                          >
-                            {filteredValoresCatalog.map(item =>
-                              <ComboBoxItem key={item.key} data-key={item.key} text={item.text} />
-                            )}
-                          </ComboBox>
-                        </TableCell>
-                        <TableCell>
-                          <FlexBox direction="Column" style={{ gap: '0.5rem' }}>
-                            <Input name="idgroup" value={editingRowData?.idgroup || ''} disabled style={{ width: '100%' }} />
-                            <Button
-                              icon="edit"
-                              design="Transparent"
-                              onClick={() => setIsEditGrupoETModalOpen(true)}
-                              disabled={!editingRowData?.sociedad || !editingRowData?.sucursal}
-                              title="Editar Grupo ET"
-                              style={{ alignSelf: 'flex-start' }}
-                            />
-                          </FlexBox>
-                        </TableCell>
-                        <TableCell>
-                          <Input name="idg" value={editingRowData?.idg || ''} onInput={handleEditInputChange} />
-                        </TableCell>
-                        <TableCell>
-                          <Input name="info" value={editingRowData?.info || ''} onInput={handleEditInputChange} />
-                        </TableCell>
-                        <TableCell>
-                          {/* El registro generalmente no es editable */}
-                          <span>{row.registro}</span>
-                        </TableCell>
-                        <TableCell>
-                          {/* La última modificación no es editable */}
-                          <span>{row.ultMod}</span>
-                        </TableCell>
-                        <TableCell>
-                          <FlexBox direction="Column" style={{ gap: '0.5rem' }}>
-                            <Button
-                              icon="accept"
-                              design="Positive"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                handleGuardarCambiosEdicion(editingRowData, originalRowData);
-                                setExpandedRowId(null); // Cierra la fila después de guardar
-                              }}
-                            >
-                              Guardar
-                            </Button>
-                            <Button
-                              icon="decline"
-                              design="Negative"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                setExpandedRowId(null); // Simplemente cierra la fila
-                                setEditingRowData(null);
-                              }}
-                            >
-                              Cancelar
-                            </Button>
-                          </FlexBox>
-                        </TableCell>
-                      </TableRow>
-                    )}
-                  </React.Fragment>
-                );
-              })}
-            </Table>
-          ) : (
-            <p className="no-data-msg">No hay datos disponibles</p>
-          )}
-        </div>
       </div>
 
       {/* Modal */}
-      { isModalOpen &&
-      <ModalCrear
-        isModalOpen={isModalOpen}
-        handleCloseModal={cerrarModalCreacion}
-        dbConnection={dbConnection}
-        refetchData={fetchData}
-        sociedadesCatalog={sociedadesCatalog}
-        valoresCatalog={valoresCatalog}
-        cedisCatalog={cedisCatalog}
-        etiquetasCatalog={etiquetasCatalog}
-      />
+      {isModalOpen &&
+        <ModalCrear
+          isModalOpen={isModalOpen}
+          handleCloseModal={() => setIsModalOpen(false)}
+          dbConnection={dbConnection}
+          refetchData={fetchData}
+          sociedadesCatalog={sociedadesCatalog}
+          valoresCatalog={valoresCatalog}
+          cedisCatalog={cedisCatalog}
+          etiquetasCatalog={etiquetasCatalog}
+        />
 
       }
 

@@ -14,9 +14,6 @@ import {
 import ModalEditGrupoET from "./ModalEditGrupoET.jsx";
 import ButtonDesign from "@ui5/webcomponents/dist/types/ButtonDesign.js";
 
-// Constantes para consultar el backend del equipo de miguellopez corriendo en localhost
-const URL_BASE_BACKEND_MIGUEL = "http://localhost:3034";
-
 const URL_BASE_BACKEND_CINNALOVERS = "https://app-restful-sap-cds.onrender.com";
 const LOGGED_USER = "FMIRADAJ";
 
