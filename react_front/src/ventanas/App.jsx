@@ -853,12 +853,19 @@ export default function App() {
       </div>
 
       {/* Modal */}
+      { isModalOpen &&
       <ModalCrear
         isModalOpen={isModalOpen}
         handleCloseModal={cerrarModalCreacion}
         dbConnection={dbConnection}
         refetchData={fetchData}
+        sociedadesCatalog={sociedadesCatalog}
+        valoresCatalog={valoresCatalog}
+        cedisCatalog={cedisCatalog}
+        etiquetasCatalog={etiquetasCatalog}
       />
+
+      }
 
       {/* Modal para editar Grupo ET en la fila */}
       <ModalEditGrupoET

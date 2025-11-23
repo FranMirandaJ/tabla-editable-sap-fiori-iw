@@ -21,12 +21,16 @@ const URL_BASE_BACKEND_CINNALOVERS = "https://app-restful-sap-cds.onrender.com";
 const LOGGED_USER = "FMIRADAJ";
 
 
-const ModalCrear = ({ isModalOpen, handleCloseModal, dbConnection, refetchData }) => {
-
-    const [sociedadesCatalog, setSociedadesCatalog] = useState([]);
-    const [cedisCatalog, setCedisCatalog] = useState([]);
-    const [etiquetasCatalog, setEtiquetasCatalog] = useState([]);
-    const [valoresCatalog, setValoresCatalog] = useState([]);
+const ModalCrear = ({
+    isModalOpen,
+    handleCloseModal,
+    dbConnection,
+    refetchData,
+    sociedadesCatalog,
+    cedisCatalog,
+    etiquetasCatalog,
+    valoresCatalog
+}) => {
 
     // Estados para los catálogos filtrados
     const [filteredCedisCatalog, setFilteredCedisCatalog] = useState([]);
@@ -48,115 +52,6 @@ const ModalCrear = ({ isModalOpen, handleCloseModal, dbConnection, refetchData }
     // console.log("valores", valoresCatalog);
 
     const [isModalEditGrupoETOpen, setIsModalEditGrupoETOpen] = useState(false);
-
-    useEffect(() => {
-        const fetchCatalogos = async () => {
-            if (!isModalOpen) return;
-            try {
-                const url = `${URL_BASE_BACKEND_MIGUEL}/api/cat/crudLabelsValues?ProcessType=GetAll&LoggedUser=MIGUELLOPEZ&DBServer=${dbConnection === "Azure" ? "CosmosDB" : "MongoDB"}`;
-                const response = await fetch(url, {
-                    method: "POST",
-                    headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({
-                        operations: [
-                            {
-                                collection: "LabelsValues",
-                                action: "GETALL",
-                                payload: {}
-                            }
-                        ]
-                    }),
-                });
-
-                if (!response.ok) {
-                    console.log(`Error HTTP: ${response.status}`);
-                }
-
-                const data = await response.json();
-                const registros = data.data?.[0]?.dataRes || [];
-
-                if (!Array.isArray(registros) || registros.length === 0) {
-                    return;
-                }
-
-                const sociedades = [];
-                const cedis = [];
-                const etiquetas = [];
-                const valores = [];
-
-                registros.forEach((item) => {
-                    // SOCIEDADES
-                    if (item.IDSOCIEDAD && !sociedades.some((s) => s.key === item.IDSOCIEDAD)) {
-                        sociedades.push({
-                            key: item.IDSOCIEDAD,
-                            text: `Sociedad ${item.IDSOCIEDAD}`,
-                        });
-                    }
-
-                    // CEDIS
-                    if (
-                        item.IDSOCIEDAD &&
-                        item.IDCEDI &&
-                        !cedis.some((c) => c.key === item.IDCEDI && c.parentSoc === item.IDSOCIEDAD)
-                    ) {
-                        cedis.push({
-                            key: item.IDCEDI,
-                            text: `Cedi ${item.IDCEDI}`,
-                            parentSoc: item.IDSOCIEDAD,
-                        });
-                    }
-
-                    // ETIQUETAS
-                    // Guardar etiqueta COMPLETA en etiquetasAll
-                    // ETIQUETAS (IDS reales + conservar COLECCION/SECCION para filtros)
-                    if (item.IDETIQUETA && item.IDSOCIEDAD && item.IDCEDI && !etiquetas.some((e) => e.key === item.IDETIQUETA)) {
-                        etiquetas.push({
-                            key: item.IDETIQUETA,
-                            text: item.IDETIQUETA,
-                            IDETIQUETA: item.IDETIQUETA,
-                            ETIQUETA: item.ETIQUETA,
-                            IDSOCIEDAD: item.IDSOCIEDAD,
-                            IDCEDI: item.IDCEDI,
-                            COLECCION: item.COLECCION || "",
-                            SECCION: item.SECCION || "",
-                            _raw: item
-                        });
-                    }
-
-                    const etiquetasSimplificadas = etiquetas.map(e => ({
-                        key: e.IDETIQUETA,
-                        text: e.ETIQUETA || e.IDETIQUETA,
-                        IDSOCIEDAD: e.IDSOCIEDAD,
-                        IDCEDI: e.IDCEDI
-                    }));
-
-                    // VALORES anidados
-                    if (Array.isArray(item.valores)) {
-                        item.valores.forEach((v) => {
-                            valores.push({
-                                key: v.IDVALOR,     // ID REAL
-                                text: v.IDVALOR,
-                                IDVALOR: v.IDVALOR,
-                                VALOR: v.VALOR,
-                                IDSOCIEDAD: v.IDSOCIEDAD,
-                                IDCEDI: v.IDCEDI,
-                                parentEtiqueta: item.IDETIQUETA
-                            });
-                        });
-                    }
-                });
-
-                setCedisCatalog(cedis);
-                setEtiquetasCatalog(etiquetas);
-                setValoresCatalog(valores);
-                setSociedadesCatalog(sociedades);
-
-            } catch (error) {
-                console.error('Error fetching data:', error);
-            }
-        }
-        fetchCatalogos();
-    }, [isModalOpen]);
 
     const handleGuardar = async () => {
         try {
