@@ -804,6 +804,7 @@ export default function App() {
               icon="add"
               design={ButtonDesign.Positive}
               onClick={() => setIsModalOpen(true)}
+              disabled={loading}
             >
               Crear
             </Button>
@@ -859,17 +860,17 @@ export default function App() {
               value={filters.search}
               onInput={(e) => updateFilter("search", e.target.value)}
               onClear={() => updateFilter("search", "")}
-
+              disabled={loading}
             />
 
             <SegmentedButton onSelectionChange={handleStatusFilterChange}>
-              <SegmentedButtonItem data-key="0" pressed={filters.status === "todos"}>
+              <SegmentedButtonItem disabled={loading} data-key="0" pressed={filters.status === "todos"}>
                 Todos
               </SegmentedButtonItem>
-              <SegmentedButtonItem data-key="1" pressed={filters.status === "activos"}>
+              <SegmentedButtonItem disabled={loading} data-key="1" pressed={filters.status === "activos"}>
                 Activos
               </SegmentedButtonItem>
-              <SegmentedButtonItem data-key="2" pressed={filters.status === "inactivos"}>
+              <SegmentedButtonItem disabled={loading} data-key="2" pressed={filters.status === "inactivos"}>
                 Inactivos
               </SegmentedButtonItem>
             </SegmentedButton>
@@ -879,6 +880,7 @@ export default function App() {
               icon="filter"
               design={ButtonDesign.Default}
               onClick={() => { }}
+              disabled={loading}
             />
           </div>
         </div>
