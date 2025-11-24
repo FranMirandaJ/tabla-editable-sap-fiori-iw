@@ -1,3 +1,9 @@
 html, body {
     overflow-y: hidden !important;
+    
+}
+/* Ocultar SOLO el checkbox dentro de la subfila inline */
+.inlineDetailRow .sapMCb {
+  visibility: hidden !important;   /* o display:none, si quieres, pero solo aquí */
+  pointer-events: none;            /* para que no se pueda hacer clic */
 }

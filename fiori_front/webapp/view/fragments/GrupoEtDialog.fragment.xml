@@ -2,32 +2,32 @@
   <Dialog id="grupoEtDialog" title="Definir Grupo ET" stretchOnPhone="true">
     <content>
       <VBox class="sapUiSmallMargin">
-        <Label text="Grupo ET - Etiqueta" />
-        <!-- Reusa el /etiquetas (ya filtrado por Soc/Cedi) -->
+        <!-- Grupo ET - Etiqueta -->
+        <Label text="Grupo ET - Etiqueta" class="sapUiSmallMarginTop"/>
         <ComboBox
-        id="grpEtEtiqueta"
-        items="{cascadeModel>/etiquetas}"
-        selectedKey="{grupoEtModel>/selectedEtiqueta}"
-        selectionChange=".onGrupoEtiquetaChange"
-        placeholder="Selecciona una Etiqueta">
-        <core:Item key="{cascadeModel>key}" text="{cascadeModel>key}" />
-      </ComboBox>
+          id="grpEtiqueta"
+          items="{grupoEtModel>/etiquetas}"
+          selectedKey="{grupoEtModel>/selectedEtiqueta}"
+          selectionChange=".onGrupoEtiquetaChange"
+          placeholder="Selecciona una Etiqueta">
+          <!-- key = IDETIQUETA, text = nombre de la etiqueta -->
+          <core:Item key="{grupoEtModel>IDETIQUETA}" text="{grupoEtModel>ETIQUETA}" />
+        </ComboBox>
 
+        <!-- Grupo ET - Valor -->
         <Label text="Grupo ET - Valor" class="sapUiMediumMarginTop"/>
-        <!-- Valores para la etiqueta seleccionada, cargados en grupoEtModel>/valoresList -->
         <ComboBox
-        id="grpEtValor"
-        items="{grupoEtModel>/valoresList}"
-        selectedKey="{grupoEtModel>/selectedValor}"
-        selectionChange=".onGrupoValorChange"
-        enabled="{= !!${grupoEtModel>/selectedEtiqueta} }"
-        placeholder="Selecciona un Valor">
-        <core:Item key="{grupoEtModel>key}" text="{grupoEtModel>text}" />
-      </ComboBox>
+          id="grpEtValor"
+          items="{grupoEtModel>/valoresList}"
+          selectedKey="{grupoEtModel>/selectedValor}"
+          enabled="{= !!${grupoEtModel>/selectedEtiqueta} }"
+          selectionChange=".onGrupoValorChange"
+          placeholder="Selecciona un Valor">
+          <!-- key = IDVALOR, text = nombre del valor -->
+          <core:Item key="{grupoEtModel>IDVALOR}" text="{grupoEtModel>VALOR}" />
+        </ComboBox>
 
-
-
-
+        <!-- Resultado -->
         <Label text="Resultado (Etiqueta-Valor)" class="sapUiMediumMarginTop"/>
         <Input value="{grupoEtModel>/displayName}" editable="false" width="100%"/>
       </VBox>
