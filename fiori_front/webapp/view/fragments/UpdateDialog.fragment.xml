@@ -39,7 +39,8 @@
                             enabled="{= !!${updateModel>/IDCEDI} }"
                             placeholder="Selecciona una Etiqueta"
                             width="100%">
-                            <core:Item key="{cascadeModel>key}" text="{cascadeModel>key}" />
+                            <!-- key = IDETIQUETA (ID real), text = ETIQUETA (nombre bonito) -->
+                            <core:Item key="{cascadeModel>IDETIQUETA}" text="{cascadeModel>ETIQUETA}" />
                         </ComboBox>
                         <Button
                             icon="sap-icon://filter"
@@ -47,6 +48,7 @@
                             tooltip="Filtros avanzados"
                             class="sapUiTinyMarginBegin" />
                     </HBox>
+
 
                     <!-- VALOR -->
                     <Label text="Valor" required="true" />

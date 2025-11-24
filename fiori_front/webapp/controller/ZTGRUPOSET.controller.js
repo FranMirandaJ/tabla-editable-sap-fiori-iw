@@ -92,7 +92,7 @@ sap.ui.define([
       this._aAllItems = [];
       this._aFilteredItems = [];
       this._iCurrentPage = 1;
-      this._iPageSize = 5;
+      this._iPageSize = 10;
 
       this._aCatalogData = [];
 
@@ -200,10 +200,13 @@ sap.ui.define([
           ModificacionCompleta: x.FECHAULTMOD ? `${x.FECHAULTMOD} ${x.HORAULTMOD} (${x.USUARIOMOD || 'N/A'})` : 'Sin modificaciones'
         }));
 
-        // Guardamos todos los items y configuramos la paginación inicial
+        // 🔹 Guardamos todo tal cual viene del backend
         this._aAllItems = normalized;
-        this.getView().setModel(new JSONModel(), "grupos"); // Creamos el modelo vacío
-        this._applyFiltersAndSort(); // Aplicamos filtros/orden por defecto y mostramos la primera página
+        this._aFilteredItems = [...this._aAllItems];   // <- SIN ordenar aquí
+
+        // Modelo de la tabla y primera página
+        this.getView().setModel(new JSONModel(), "grupos");
+        this._updateTablePage();           // Aplicamos filtros/orden por defecto y mostramos la primera página
 
       } catch (e) {
         MessageToast.show("Error cargando datos: " + e.message);
@@ -216,13 +219,28 @@ sap.ui.define([
     },
 
     onSelectionChange: function () {
-      const item = this.byId("tblGrupos").getSelectedItem();
-      const rec = item ? item.getBindingContext("grupos").getObject() : null;
+      const oTable = this.byId("tblGrupos");
+      const aItems = oTable.getSelectedItems();
+      const iCount = aItems.length;
 
-      this.byId("btnEdit").setEnabled(!!rec);
-      this.byId("btnDelete").setEnabled(!!rec);
-      this.byId("btnDeactivate").setEnabled(!!rec && rec.ACTIVO === true);
-      this.byId("btnActivate").setEnabled(!!rec && rec.ACTIVO === false);
+      // Para editar solo tiene sentido 1 registro seleccionado
+      this.byId("btnEdit").setEnabled(iCount === 1);
+
+      // Para eliminar / activar / desactivar permitimos varios
+      const bHasSelection = iCount > 0;
+
+      this.byId("btnDelete").setEnabled(bHasSelection);
+      this.byId("btnDeactivate").setEnabled(bHasSelection);
+      this.byId("btnActivate").setEnabled(bHasSelection);
+    },
+
+    _getSelectedRecords: function () {
+      const oTable = this.byId("tblGrupos");
+      const aItems = oTable.getSelectedItems() || [];
+
+      return aItems.map(oItem =>
+        oItem.getBindingContext("grupos").getObject()
+      );
     },
 
     onRowPress: function (oEvent) {
@@ -631,7 +649,7 @@ sap.ui.define([
         console.log("✅ Etiquetas cargadas:", etiquetas);
         console.log("✅ Valores cargados:", valores);
 
-        // 🔹 Actualizamos el modelo
+        // Actualizamos el modelo
         oModel.setProperty("/sociedades", sociedades);
         oModel.setProperty("/cedisAll", cedis);
         oModel.setProperty("/etiquetasAll", etiquetas);
@@ -922,52 +940,68 @@ sap.ui.define([
       this.onEtiquetaFilterPress();
     },
 
+    // Abre el diálogo de Grupo ET desde el modal de UPDATE
     onUpdateOpenGrupoEt: function () {
-      const oUpdate = this.getView().getModel("updateModel");
-      const sSoc = oUpdate.getProperty("/IDSOCIEDAD");
-      const sCedi = oUpdate.getProperty("/IDCEDI");
+        const oUpdate = this.getView().getModel("updateModel");
+        const sSoc  = oUpdate.getProperty("/IDSOCIEDAD");
+        const sCedi = oUpdate.getProperty("/IDCEDI");
 
-      if (!sSoc || !sCedi) {
-        MessageToast.show("Selecciona primero Sociedad y CEDI.");
-        return;
-      }
+        if (!sSoc || !sCedi) {
+            MessageToast.show("Selecciona primero Sociedad y CEDI.");
+            return;
+        }
 
-      // 🔴 MARCAR CONTEXTO DE EDICIÓN
-      this._grupoEtEditMode = "update";
+        // 🔴 Indicamos que el diálogo está en modo "update"
+        this._grupoEtEditMode = "update";
 
-      // 🟢 FILTRAR ETIQUETAS SEGÚN SOC + CEDI ANTES DE ABRIR EL MODAL
-      const oCascade = this.getView().getModel("cascadeModel");
-      const allEtiquetas = oCascade.getProperty("/etiquetasAll") || [];
+        const oCascade = this.getView().getModel("cascadeModel");
+        const oGM      = this.getView().getModel("grupoEtModel");
 
-      const filteredEtiquetas = allEtiquetas.filter(
-        e => String(e.IDSOCIEDAD) === String(sSoc) &&
-          String(e.IDCEDI) === String(sCedi)
-      );
+        // 1) Tomamos TODAS las etiquetas completas (las que traen IDETIQUETA y ETIQUETA)
+        const aAllEtiquetas = oCascade.getProperty("/etiquetasAll") || [];
 
-      oCascade.setProperty("/etiquetas", filteredEtiquetas);
+        // 2) Filtramos solo las de la Sociedad / CEDI actuales
+        const aFiltradas = aAllEtiquetas.filter(e =>
+            String(e.IDSOCIEDAD) === String(sSoc) &&
+            String(e.IDCEDI)     === String(sCedi)
+        );
 
-      console.log("🔍 Etiquetas filtradas para Grupo ET Update:", filteredEtiquetas.length);
+        // 3) Mapeamos al formato que usa el diálogo:
+        //    key  = IDETIQUETA (ID)
+        //    text = ETIQUETA  (descripción legible)
+        const aComboItems = aFiltradas.map(e => ({
+            key:        e.IDETIQUETA,
+            text:       e.ETIQUETA || e.IDETIQUETA,
+            IDETIQUETA: e.IDETIQUETA,
+            ETIQUETA:   e.ETIQUETA
+        }));
 
-      // Abrir o crear el diálogo
-      if (!this._oGrupoEtDialog) {
-        Fragment.load({
-          id: this.getView().getId() + "--grupoEtDialog",
-          name: "com.itt.ztgruposet.frontendztgruposet.view.fragments.GrupoEtDialog",
-          controller: this
-        }).then(oDialog => {
-          this._oGrupoEtDialog = oDialog;
-          this.getView().addDependent(oDialog);
+        // 4) Guardamos la lista en grupoEtModel para que el ComboBox la muestre
+        oGM.setProperty("/etiquetas", aComboItems);
 
-          // Pre-cargar valores actuales de IDGRUPOET si existen
-          this._preloadGrupoEtForUpdate();
+        // 5) Limpiamos selección previa del diálogo
+        oGM.setProperty("/selectedEtiqueta", null);
+        oGM.setProperty("/selectedValor",   null);
+        oGM.setProperty("/valoresList",     []);
+        oGM.setProperty("/displayName",     "");
 
-          oDialog.open();
-        }).catch(err => console.error(err));
-      } else {
-        // Pre-cargar valores actuales antes de abrir
+        // 6) Si el registro ya tiene IDGRUPOET, precargamos la selección
         this._preloadGrupoEtForUpdate();
-        this._oGrupoEtDialog.open();
-      }
+
+        // 7) Abrimos (o creamos) el fragmento del diálogo
+        if (!this._oGrupoEtDialog) {
+            sap.ui.core.Fragment.load({
+                id:   this.getView().getId() + "--grupoEtDialog",
+                name: "com.itt.ztgruposet.frontendztgruposet.view.fragments.GrupoEtDialog",
+                controller: this
+            }).then(oDialog => {
+                this._oGrupoEtDialog = oDialog;
+                this.getView().addDependent(oDialog);
+                oDialog.open();
+            });
+        } else {
+            this._oGrupoEtDialog.open();
+        }
     },
 
     _preloadGrupoEtForUpdate: function () {
@@ -1240,47 +1274,65 @@ sap.ui.define([
     },
 
     onDeletePress: function () {
-      const rec = this._getSelectedRecord();
-      if (!rec) {
-        sap.m.MessageToast.show("Selecciona un registro primero.");
+      const aRecs = this._getSelectedRecords();
+      if (!aRecs || aRecs.length === 0) {
+        sap.m.MessageToast.show("Selecciona al menos un registro.");
         return;
       }
 
-      // Usa el mismo casing que en GetAll: 'Mongodb' o 'MongoDB'
       const url = this._getApiParams("DeleteHard");
-      const payload = this._buildDeletePayload(rec);
 
-      sap.m.MessageBox.warning(
-        `Vas a ELIMINAR físicamente el grupo "${rec.IDETIQUETA}" (ID ${rec.ID}).\nEsta acción no se puede deshacer.\n\n¿Continuar?`,
-        {
-          title: "Confirmar eliminación definitiva",
-          actions: [sap.m.MessageBox.Action.OK, sap.m.MessageBox.Action.CANCEL],
-          emphasizedAction: sap.m.MessageBox.Action.OK,
-          onClose: async (act) => {
-            if (act !== sap.m.MessageBox.Action.OK) return;
+      // Construimos un texto de confirmación más claro
+      const sMsg =
+        aRecs.length === 1
+          ? `Vas a ELIMINAR físicamente el grupo "${aRecs[0].IDETIQUETA}" (ID ${aRecs[0].ID}).\nEsta acción no se puede deshacer.\n\n¿Continuar?`
+          : `Vas a ELIMINAR físicamente ${aRecs.length} registros.\nEsta acción no se puede deshacer.\n\n¿Continuar?`;
 
-            this.getView().setBusy(true);
-            try {
-              const res = await fetch(url, {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify(payload)          // ← si tu API acepta solo llaves, ver nota abajo
-              });
-              const json = await res.json().catch(() => ({}));
-              if (!res.ok) throw new Error("HTTP " + res.status + (json.messageUSR ? " - " + json.messageUSR : ""));
+      const doDeleteAll = async () => {
+        this.getView().setBusy(true);
 
-              sap.m.MessageToast.show("Registro eliminado definitivamente.");
-              await this._loadData();
-              this.byId("tblGrupos").removeSelections(true);
-              this.onSelectionChange(); // deshabilita botones
-            } catch (e) {
-              sap.m.MessageBox.error("No se pudo eliminar: " + e.message);
-            } finally {
-              this.getView().setBusy(false);
+        try {
+          // Ejecutamos los deletes en serie o en paralelo
+          for (const rec of aRecs) {
+            const payload = this._buildDeletePayload(rec);
+
+            const res = await fetch(url, {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify(payload)
+            });
+
+            const json = await res.json().catch(() => ({}));
+            if (!res.ok) {
+              throw new Error(
+                "HTTP " + res.status + (json.messageUSR ? " - " + json.messageUSR : "")
+              );
             }
           }
+
+          sap.m.MessageToast.show("Registros eliminados correctamente.");
+          await this._loadData();
+          this.byId("tblGrupos").removeSelections(true);
+          this.onSelectionChange(); // actualiza botones
+
+        } catch (e) {
+          console.error(e);
+          sap.m.MessageBox.error("No se pudo eliminar: " + e.message);
+        } finally {
+          this.getView().setBusy(false);
         }
-      );
+      };
+
+      sap.m.MessageBox.warning(sMsg, {
+        title: "Confirmar eliminación definitiva",
+        actions: [sap.m.MessageBox.Action.OK, sap.m.MessageBox.Action.CANCEL],
+        emphasizedAction: sap.m.MessageBox.Action.OK,
+        onClose: function (act) {
+          if (act === sap.m.MessageBox.Action.OK) {
+            doDeleteAll();
+          }
+        }
+      });
     },
     //filtro rapido ////////////////////////////////////////////////////////////////////////////////
     onQuickFilter: function (oEvent) {
@@ -1896,25 +1948,30 @@ sap.ui.define([
 
       // Abrir / crear el diálogo compartido
       if (!this._oGrupoEtDialog) {
-        sap.ui.core.Fragment.load({
-          id: this.getView().getId() + "--grupoEtDialog",
-          name: "com.itt.ztgruposet.frontendztgruposet.view.fragments.GrupoEtDialog",
-          controller: this
-        }).then(oDialog => {
-          this._oGrupoEtDialog = oDialog;
-          this.getView().addDependent(oDialog);
-          oDialog.open();
-        });
+      sap.ui.core.Fragment.load({
+        id: this.getView().getId() + "--grupoEtDialog",
+        name: "com.itt.ztgruposet.frontendztgruposet.view.fragments.GrupoEtDialog",
+        controller: this
+      }).then(oDialog => {
+        this._oGrupoEtDialog = oDialog;
+        this.getView().addDependent(oDialog);
+
+        this._setupGrupoEtDialogFilters();   // 👈 aquí
+
+        oDialog.open();
+      });
       } else {
+        this._setupGrupoEtDialogFilters();     // 👈 y también aquí
         this._oGrupoEtDialog.open();
       }
     },
 
     // Abre el diálogo (carga fragment con id prefijado, repuebla listas y abre)
-    onOpenGrupoEtInline: function () {
+
+     onOpenGrupoEtInline: function () {
       const oInline = this.getView().getModel("inlineEdit");
-      const sSoc  = oInline.getProperty("/current/IDSOCIEDAD"); 
-      const sCedi = oInline.getProperty("/current/IDCEDI");     
+      const sSoc  = oInline.getProperty("/current/IDSOCIEDAD");
+      const sCedi = oInline.getProperty("/current/IDCEDI");
 
       if (!sSoc || !sCedi) {
         sap.m.MessageToast.show("Selecciona primero Sociedad y CEDI.");
@@ -1923,18 +1980,27 @@ sap.ui.define([
 
       this._grupoEtEditMode = "inline";
 
-      const oCascade  = this.getView().getModel("cascadeModel");
-      const aAllEt    = oCascade.getProperty("/etiquetasAll") || [];
+      // 1) Traemos todas las etiquetas desde cascadeModel
+      const oCascade   = this.getView().getModel("cascadeModel");
+      const aAllEt     = oCascade.getProperty("/etiquetasAll") || [];
 
       const aFiltradas = aAllEt.filter(e =>
         String(e.IDSOCIEDAD) === String(sSoc) &&
         String(e.IDCEDI)     === String(sCedi)
       );
-      oCascade.setProperty("/etiquetas", aFiltradas);
 
+      // 2) Pero las guardamos en grupoEtModel (el que usa el fragmento)
+      const oGrupoEtModel = this.getView().getModel("grupoEtModel");
+      oGrupoEtModel.setProperty("/etiquetas", aFiltradas);
+      oGrupoEtModel.setProperty("/selectedEtiqueta", "");  // opcional
+      oGrupoEtModel.setProperty("/valoresList", []);       // limpia valores
+      oGrupoEtModel.setProperty("/selectedValor", "");     // opcional
+      oGrupoEtModel.setProperty("/displayName", "");       // opcional
+
+      // 3) Precargar datos para modo inline, si lo necesitas
       this._preloadGrupoEtForInline();
 
-      // Abrir (o crear) el mismo diálogo que ya usas
+      // 4) Abrir diálogo
       if (!this._oGrupoEtDialog) {
         sap.ui.core.Fragment.load({
           id: this.getView().getId() + "--grupoEtDialog",
@@ -1943,18 +2009,82 @@ sap.ui.define([
         }).then(oDialog => {
           this._oGrupoEtDialog = oDialog;
           this.getView().addDependent(oDialog);
+          this._setupGrupoEtDialogFilters();
           oDialog.open();
         });
       } else {
+        this._setupGrupoEtDialogFilters();
         this._oGrupoEtDialog.open();
       }
     },
 
+            /**
+       * Configura los filtros de los ComboBox del diálogo "Definir Grupo ET"
+       * para que filtren por cualquier parte del texto y por varias columnas.
+       */
+      _setupGrupoEtDialogFilters: function () {
+        // === Combo de ETIQUETA ===
+        const oCbEtiqueta = this.byId("grpEtiqueta");
+        if (oCbEtiqueta && !oCbEtiqueta._bFilterConfigured) {
+          oCbEtiqueta.setFilterFunction(function (sTerm, oItem) {
+            if (!sTerm) { return true; }
+
+            const sQuery = sTerm.toLowerCase();
+            const oCtx   = oItem.getBindingContext("grupoEtModel");
+            if (!oCtx) { return false; }
+
+            const oData = oCtx.getObject();
+
+            // Campos que quieres que entren en la búsqueda
+            const sEtiqueta   = (oData.ETIQUETA   || "").toLowerCase();
+            const sIdEtiqueta = (oData.IDETIQUETA || "").toLowerCase();
+            const sIndice     = (oData.INDICE     || "").toLowerCase();   // por si quieres también INDICE
+
+            const sFullText = [sEtiqueta, sIdEtiqueta, sIndice].join(" ");
+
+            return sFullText.indexOf(sQuery) !== -1;
+          });
+
+          // banderita para no volver a configurarlo
+          oCbEtiqueta._bFilterConfigured = true;
+        }
+
+        // === Combo de VALOR ===
+        const oCbValor = this.byId("grpEtValor");
+        if (oCbValor && !oCbValor._bFilterConfigured) {
+          oCbValor.setFilterFunction(function (sTerm, oItem) {
+            if (!sTerm) { return true; }
+
+            const sQuery = sTerm.toLowerCase();
+            const oCtx   = oItem.getBindingContext("grupoEtModel");
+            if (!oCtx) { return false; }
+
+            const oData = oCtx.getObject();
+
+            // Campos para el valor
+            const sValor       = (oData.VALOR       || "").toLowerCase();
+            const sIdValor     = (oData.IDVALOR     || "").toLowerCase();
+            const sAlias       = (oData.ALIAS       || "").toLowerCase();
+            const sDescripcion = (oData.DESCRIPCION || "").toLowerCase();
+
+            const sFullText = [sValor, sIdValor, sAlias, sDescripcion].join(" ");
+
+            return sFullText.indexOf(sQuery) !== -1;
+          });
+
+          oCbValor._bFilterConfigured = true;
+        }
+      },
+
     // Cuando seleccionan la Etiqueta dentro del modal -> cargar valores en grupoEtModel>/valoresList
     onGrupoEtiquetaChange: function (oEvent) {
-      const selectedEtiqueta = oEvent.getSource().getSelectedKey();
+      // ID de la etiqueta seleccionada (viene del ComboBox de Grupo ET - Etiqueta)
+      const selectedEtiquetaId = oEvent.getSource().getSelectedKey();
 
-      // 1) Elegir de qué modelo leer según el modo
+      // 1) Elegir de qué modelo leer según el modo en que se abrió el diálogo
+      //    - create  -> createModel
+      //    - update  -> updateModel
+      //    - inline  -> inlineEdit
       let oContextModel;
       if (this._grupoEtEditMode === "update") {
         oContextModel = this.getView().getModel("updateModel");
@@ -1967,7 +2097,11 @@ sap.ui.define([
       const oGM      = this.getView().getModel("grupoEtModel");
       const oCascade = this.getView().getModel("cascadeModel");
 
-      // 2) Leer Sociedad y CEDI correctamente según el modo
+      // 👉 Muy importante: guardar también la etiqueta seleccionada en el modelo del diálogo
+      //    (se usa después para armar el IDGRUPOET y para el binding del ComboBox)
+      oGM.setProperty("/selectedEtiqueta", selectedEtiquetaId);
+
+      // 2) Leer Sociedad y CEDI correctamente según el modo (create/update/inline)
       let sSoc, sCedi;
       if (this._grupoEtEditMode === "inline") {
         sSoc  = oContextModel.getProperty("/current/IDSOCIEDAD");
@@ -1977,16 +2111,23 @@ sap.ui.define([
         sCedi = oContextModel.getProperty("/IDCEDI");
       }
 
-      // 3) Filtrar los valores de esa etiqueta + soc + cedi
+      // 3) Filtrar los valores de ESA etiqueta + Sociedad + CEDI
       const aAllVals = oCascade.getProperty("/valoresAll") || [];
+
+      // ⚠️ Asegúrate que la propiedad sea la correcta:
+      //    si en tus valores el campo es IDETIQUETA usa v.IDETIQUETA,
+      //    si de verdad usas parentEtiqueta, déjalo como está.
       const aFiltered = aAllVals.filter(v =>
-        String(v.IDSOCIEDAD)    === String(sSoc) &&
-        String(v.IDCEDI)        === String(sCedi) &&
-        String(v.parentEtiqueta) === String(selectedEtiqueta)
+        String(v.IDSOCIEDAD)     === String(sSoc) &&
+        String(v.IDCEDI)         === String(sCedi) &&
+        String(v.parentEtiqueta) === String(selectedEtiquetaId)
+        // o bien: String(v.IDETIQUETA) === String(selectedEtiquetaId)
       );
 
       // 4) Cargar la lista para el combo de "Grupo ET - Valor"
       oGM.setProperty("/valoresList", aFiltered);
+
+      // 5) Limpiar valor seleccionado y el texto del resultado mientras no se elija un valor
       oGM.setProperty("/selectedValor", null);
       oGM.setProperty("/displayName", "");
     },
@@ -2025,24 +2166,27 @@ sap.ui.define([
       oGM.setProperty("/displayName", sGrupoEt);
     },
 
-    // Cuando seleccionan el Valor -> actualizar display (Etiqueta-Valor)
+    // Cuando seleccionan el Valor dentro del modal -> armar Resultado (Etiqueta-Valor) con IDs
     onGrupoValorChange: function (oEvent) {
       const oGM = this.getView().getModel("grupoEtModel");
 
-      const selectedEtiqueta = oGM.getProperty("/selectedEtiqueta");
-      const selectedValor = oEvent.getSource().getSelectedKey();
+      // ID de la etiqueta seleccionada (viene de onGrupoEtiquetaChange)
+      const sEtiId = oGM.getProperty("/selectedEtiqueta");
+      // ID del valor seleccionado (key del ComboBox de Grupo ET - Valor)
+      const sValId = oEvent.getSource().getSelectedKey();
 
-      // Como ahora key = ID, simplemente concatenamos
-      const display = selectedEtiqueta + "-" + selectedValor;
+      // Si falta alguno, limpiamos el display
+      if (!sEtiId || !sValId) {
+        oGM.setProperty("/displayName", "");
+        return;
+      }
 
-      oGM.setProperty("/selectedValor", selectedValor);
-      oGM.setProperty("/displayName", display);
+      // 1) Concatenar ID de ETIQUETA + "-" + ID de VALOR
+      const sGrupoEt = sEtiId + "-" + sValId;
 
-      console.log("✔ CAMBIO DE VALOR GRUPO ET:");
-      console.log(" - Modo:", this._grupoEtEditMode);
-      console.log(" - selectedEtiqueta (ID) =", selectedEtiqueta);
-      console.log(" - selectedValor (ID) =", selectedValor);
-      console.log(" - display =", display);
+      // 2) Guardar el valor seleccionado y el texto que se mostrará en "Resultado (Etiqueta-Valor)"
+      oGM.setProperty("/selectedValor", sValId);
+      oGM.setProperty("/displayName", sGrupoEt);   // Ej: COLOR_PRODUCTO2-color
     },
 
     // Aceptar: escribir en createModel>/IDGRUPOET (y cerrar)
@@ -2110,9 +2254,8 @@ sap.ui.define([
       const oTable  = this.byId("tblGrupos");
       const oButton = oEvent.getSource();
       const oMainItem  = oButton.getParent();
-      const iMainIndex = oTable.indexOfItem(oMainItem);
 
-      // 0. Si ya hay subfila -> colapsar
+       // 0. Si esta misma fila ya tiene subfila -> colapsar y salir
       const oExistingDetail = oMainItem.data("detailItem");
       if (oExistingDetail) {
         oTable.removeItem(oExistingDetail);
@@ -2120,6 +2263,11 @@ sap.ui.define([
         oButton.setIcon("sap-icon://slim-arrow-down");
         return;
       }
+
+       //cerrar cualquier otra subfila que esté abierta
+      this._closeAnyInlineRow();
+       // 2. AHORA sí, calcular el índice de la fila principal
+      const iMainIndex = oTable.indexOfItem(oMainItem);
 
       // 1. Asegurar que los catálogos estén cargados
       if (!this._bCatalogLoaded) {
@@ -2142,131 +2290,171 @@ sap.ui.define([
       // 4. Precargar cascadas (CEDI / Etiqueta / Valor) para esta fila
       this._preloadInlineCascades(oRec);
 
-      // 5. Construir la subfila, bindeando a inlineEdit>/current
-      const oDetailItem = new sap.m.ColumnListItem({
-        type: "Inactive",
-        vAlign: "Middle",
-        cells: [
+      // === CONTROLES DE LA SUBFILA ===
 
-          // Columna de la flechita (vacía)
-          new sap.m.Text({ text: "" }),
-
-          // === SOCIEDAD ===
-          new ComboBox({
-            width: "100%",
-            items: {
+      // SOCIEDAD
+      const oCmbSociedadInline = new ComboBox({
+          width: "100%",
+          items: {
               path: "cascadeModel>/sociedades",
               template: new CoreItem({
-                key: "{cascadeModel>key}",
-                text: "{cascadeModel>text}"
+                  key: "{cascadeModel>key}",
+                  text: "{cascadeModel>text}"
               })
-            },
-            selectedKey: "{inlineEdit>/current/IDSOCIEDAD}",
-            change: this.onInlineSociedadChange.bind(this)
-          }),
+          },
+          selectedKey: "{inlineEdit>/current/IDSOCIEDAD}",
+          change: this.onInlineSociedadChange.bind(this)
+      });
 
-          // === CEDI ===
-          new ComboBox({
-            width: "100%",
-            items: {
+      // CEDI
+      const oCmbCediInline = new ComboBox({
+          width: "100%",
+          items: {
               path: "cascadeModel>/cedis",
               template: new CoreItem({
-                key: "{cascadeModel>key}",
-                text: "{cascadeModel>text}"
+                  key: "{cascadeModel>key}",
+                  text: "{cascadeModel>text}"
               })
-            },
-            selectedKey: "{inlineEdit>/current/IDCEDI}",
-            change: this.onInlineCediChange.bind(this)
-          }),
+          },
+          selectedKey: "{inlineEdit>/current/IDCEDI}",
+          change: this.onInlineCediChange.bind(this)
+      });
 
-          // === ETIQUETA ===
-          new ComboBox({
-            width: "100%",
-            items: {
+      // ETIQUETA (ComboBox con filtro custom)
+      const oCmbEtiquetaInline = new ComboBox({
+          width: "100%",
+          items: {
               path: "cascadeModel>/etiquetas",
               template: new CoreItem({
-                key: "{cascadeModel>IDETIQUETA}",
-                text: "{cascadeModel>IDETIQUETA}"
+                  key: "{cascadeModel>IDETIQUETA}",
+                  text: "{cascadeModel>ETIQUETA}"
               })
-            },
-            selectedKey: "{inlineEdit>/current/IDETIQUETA}",
-            change: this.onInlineEtiquetaChange.bind(this)
-          }),
+          },
+          selectedKey: "{inlineEdit>/current/IDETIQUETA}",
+          change: this.onInlineEtiquetaChange.bind(this)
+      });
 
-          // === VALOR ===
-          new ComboBox({
-            width: "100%",
-            items: {
+      // 🔍 Filtro: busca en TODO el texto + el key (IDETIQUETA)
+      oCmbEtiquetaInline.setFilterFunction(function (sTerm, oItem) {
+          var sQuery = (sTerm || "").toLowerCase();
+
+          // Texto visible: "ETIQUETA - (IDETIQUETA)"
+          var sText = (oItem.getText() || "").toLowerCase();
+
+          // Key: IDETIQUETA
+          var sKey  = (oItem.getKey()  || "").toLowerCase();
+
+          return sText.indexOf(sQuery) !== -1 || sKey.indexOf(sQuery) !== -1;
+      });
+
+      // VALOR (ComboBox con filtro custom)
+      const oCmbValorInline = new ComboBox({
+          width: "100%",
+          items: {
               path: "cascadeModel>/valores",
               template: new CoreItem({
-                key: "{cascadeModel>IDVALOR}",
-                text: "{cascadeModel>IDVALOR}"
+                  key: "{cascadeModel>IDVALOR}",
+                  text: "{cascadeModel>VALOR}"
               })
-            },
-            selectedKey: "{inlineEdit>/current/IDVALOR}"
-          }),
-
-          // === GRUPO ET ===
-          new sap.m.HBox({
-            items: [
-              new sap.m.Input({
-                value: "{inlineEdit>/current/IDGRUPOET}",   // 👈 ANTES: "{inlineEdit>IDGRUPOET}"
-                editable: false,
-                width: "100%"
-              }),
-              new sap.m.Button({
-                icon: "sap-icon://edit",
-                type: "Transparent",
-                tooltip: "Seleccionar Grupo ET",
-                press: this.onOpenGrupoEtInline.bind(this)
-              })
-            ]
-          }),
-
-          // === ID ===
-          new sap.m.Input({
-            value: "{inlineEdit>/current/ID}"
-          }),
-
-          // === INFO ADICIONAL ===
-          new sap.m.Input({
-            value: "{inlineEdit>/current/INFOAD}",
-            width: "100%"
-          }),
-
-          // === REGISTRO (solo lectura, del modelo original grupos) ===
-          new sap.m.Text({
-            text: "{grupos>RegistroCompleto}"
-          }),
-
-          // === ÚLTIMA MODIFICACIÓN (solo lectura) ===
-          new sap.m.Text({
-            text: "{grupos>ModificacionCompleta}"
-          }),
-
-          // === BOTONES GUARDAR / CANCELAR ===
-          new sap.m.HBox({
-            justifyContent: "End",
-            items: [
-              new sap.m.Button({
-                text: "Guardar",
-                type: "Emphasized",
-                press: this.onSaveInlineFromDetail.bind(this)
-              }),
-              new sap.m.Button({
-                text: "Cancelar",
-                type: "Transparent",
-                press: this.onCancelInlineFromDetail.bind(this)
-              })
-            ]
-          })
-        ]
+          },
+          selectedKey: "{inlineEdit>/current/IDVALOR}"
       });
+
+      // 🔍 Filtro: busca en VALOR e IDVALOR
+      oCmbValorInline.setFilterFunction(function (sTerm, oItem) {
+          var sQuery = (sTerm || "").toLowerCase();
+
+          var sText = (oItem.getText() || "").toLowerCase(); // "VALOR - (IDVALOR)"
+          var sKey  = (oItem.getKey()  || "").toLowerCase(); // IDVALOR
+
+          return sText.indexOf(sQuery) !== -1 || sKey.indexOf(sQuery) !== -1;
+      });
+
+      // Ahora construimos el ColumnListItem usando los controles anteriores
+      const oDetailItem = new sap.m.ColumnListItem({
+          type: "Inactive",
+          vAlign: "Middle",
+          cells: [
+              // Columna flechita
+              new sap.m.Text({ text: "" }),
+
+              // SOCIEDAD
+              oCmbSociedadInline,
+
+              // CEDI
+              oCmbCediInline,
+
+              // ETIQUETA
+              oCmbEtiquetaInline,
+
+              // VALOR
+              oCmbValorInline,
+
+              // GRUPO ET
+              new sap.m.HBox({
+                  items: [
+                      new sap.m.Input({
+                          value: "{inlineEdit>/current/IDGRUPOET}",
+                          editable: false,
+                          width: "100%"
+                      }),
+                      new sap.m.Button({
+                          icon: "sap-icon://edit",
+                          type: "Transparent",
+                          tooltip: "Seleccionar Grupo ET",
+                          press: this.onOpenGrupoEtInline.bind(this)
+                      })
+                  ]
+              }),
+
+              // ID
+              new sap.m.Input({
+                  value: "{inlineEdit>/current/ID}"
+              }),
+
+              // INFO ADICIONAL
+              new sap.m.Input({
+                  value: "{inlineEdit>/current/INFOAD}",
+                  width: "100%"
+              }),
+
+              // REGISTRO
+              new sap.m.Text({
+                  text: "{grupos>RegistroCompleto}"
+              }),
+
+              // ÚLTIMA MODIFICACIÓN
+              new sap.m.Text({
+                  text: "{grupos>ModificacionCompleta}"
+              }),
+
+              // BOTONES
+              new sap.m.HBox({
+                  width: "100%",
+                  justifyContent: "Center",
+                  alignItems: "Center",
+                  items: [
+                      new sap.m.Button({
+                          text: "Guardar",
+                          type: "Emphasized",
+                          press: this.onSaveInlineFromDetail.bind(this)
+                      }),
+                      new sap.m.Button({
+                          text: "Cancelar",
+                          type: "Transparent",
+                          press: this.onCancelInlineFromDetail.bind(this)
+                      })
+                  ]
+              })
+          ]
+      });
+
+      oDetailItem.addStyleClass("inlineDetailRow");
 
       // Muy importante: que la subfila herede el mismo contexto de "grupos"
       oDetailItem.setBindingContext(oCtx, "grupos");
 
-      // Insertar justo debajo de la fila principal
+      // 7. Insertar JUSTO debajo de la fila principal
       oTable.insertItem(oDetailItem, iMainIndex + 1);
 
       // Guardar referencia para poder eliminarla al colapsar
@@ -2274,6 +2462,36 @@ sap.ui.define([
 
       // Cambiar icono a “colapsar”
       oButton.setIcon("sap-icon://slim-arrow-up");
+  },
+
+// Busca en varias propiedades del item del ComboBox (texto, key, descripción, alias, etc.)
+    _filterComboByTerm: function (sTerm, oItem, aProps) {
+      sTerm = (sTerm || "").toLowerCase();
+
+      const oCtx = oItem.getBindingContext("grupoEtModel");  // <--- AQUÍ
+      if (!oCtx) {
+        return false;
+      }
+
+      return aProps.some(function (sProp) {
+        let v = oCtx.getProperty(sProp);
+        if (v === null || v === undefined) {
+          return false;
+        }
+
+        v = String(v).toLowerCase();
+        return v.indexOf(sTerm) !== -1; // <-- COINCIDENCIA EN CUALQUIER PARTE
+      });
+  },
+
+  filterGrupoEtEtiqueta: function (sTerm, oItem) {
+    // Buscar por IDETIQUETA y ETIQUETA
+    return this._filterComboByTerm(sTerm, oItem, ["IDETIQUETA", "ETIQUETA"]);
+  },
+
+  filterGrupoEtValor: function (sTerm, oItem) {
+    // Buscar por IDVALOR, VALOR, ALIAS (si lo tienes)
+    return this._filterComboByTerm(sTerm, oItem, ["IDVALOR", "VALOR", "ALIAS"]);
   },
 
   onSaveInlineFromDetail: async function () {

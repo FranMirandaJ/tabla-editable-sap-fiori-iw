@@ -211,8 +211,8 @@
               id="tblGrupos"
               inset="false"
               items="{grupos>/items}"
-              mode="SingleSelectMaster"
-              includeItemInSelection="true"
+              mode="MultiSelect" 
+              includeItemInSelection="false"
               selectionChange=".onSelectionChange"
               fixedLayout="Strict"
             >
