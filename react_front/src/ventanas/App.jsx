@@ -44,6 +44,7 @@ import "@ui5/webcomponents-icons/dist/navigation-up-arrow.js";
 import "@ui5/webcomponents-icons/dist/filter.js";
 import "@ui5/webcomponents-icons/dist/accept.js";
 import "@ui5/webcomponents-icons/dist/decline.js";
+import ModalFiltrosAvanzados from "../components/ModalFiltrosAvanzados.jsx";
 
 const URL_BASE = "https://app-restful-sap-cds.onrender.com"; // http://localhost:4004
 const URL_BASE_BACKEND_MIGUEL = "http://localhost:3034";
@@ -51,6 +52,7 @@ const URL_BASE_BACKEND_MIGUEL = "http://localhost:3034";
 export default function App() {
   // --- Estados originales ---
   const [isModalCreateOpen, setIsModalCreateOpen] = useState(false);
+  const [isModalFiltersOpen, setIsModalFiltersOpen] = useState(false);
   const [isEditGrupoETModalOpen, setIsEditGrupoETModalOpen] = useState(false);
   const [data, setData] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -879,7 +881,7 @@ export default function App() {
               className="btn-filter"
               icon="filter"
               design={ButtonDesign.Default}
-              onClick={() => { }}
+              onClick={() => {setIsModalFiltersOpen(true)}}
               disabled={loading}
             />
           </div>
@@ -1262,6 +1264,15 @@ export default function App() {
             </FlexBox>
           </FlexBox>
         </Dialog>
+      )}
+
+      {isModalFiltersOpen && (
+        <ModalFiltrosAvanzados
+          isModalOpen={isModalFiltersOpen}
+          handleCloseModal={() => setIsModalFiltersOpen(false)}
+          filters={filters}
+          setFilters={setFilters}
+        />
       )}
 
       {/* 🔹 TOAST GENERAL */}
