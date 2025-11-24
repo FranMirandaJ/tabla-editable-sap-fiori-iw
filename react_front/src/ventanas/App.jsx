@@ -155,8 +155,7 @@ export default function App() {
     setLoading(true);
     try {
       const res = await axios.post(
-        `${URL_BASE}/api/security/gruposet/crud?ProcessType=GetAll&DBServer=${dbConnection}`,
-        {}
+        `${URL_BASE}/api/security/gruposet/crud?ProcessType=GetAll&DBServer=${dbConnection}`, {}
       );
 
       //console.log("SERVER RESPONSE ==============> ",res.data?.data?.[0]?.dataRes);
@@ -312,6 +311,18 @@ export default function App() {
     { Header: "Estado", accessor: "estado" },
   ];
 
+  const isRowSelected = (row) => {
+    return selectedRowsArray.some(
+      (r) =>
+        r.sociedad === row.sociedad &&
+        r.sucursal === row.sucursal &&
+        r.etiqueta === row.etiqueta &&
+        r.valor === row.valor &&
+        r.idg === row.idg &&
+        r.idgroup === row.idgroup
+    );
+  };
+
   const handleGuardarCambiosEdicion = async (editedData, originalData) => {
     if (!editedData.sociedad || !editedData.sucursal || !editedData.etiqueta || !editedData.valor || !editedData.idgroup || !editedData.idg) {
       showToastMessage("❌ Completa Sociedad, CEDI, Etiqueta, Valor, Grupo Etiqueta y ID.");
@@ -433,7 +444,7 @@ export default function App() {
       };
 
       const response = await axios.post(url, payload);
-      
+
       // 🔄 Refrescar la tabla
       fetchData();
       showToastMessage("✅ Registro activado correctamente");
@@ -471,7 +482,7 @@ export default function App() {
 
       // 🔄 Refrescar tabla
       fetchData();
-      
+
       showToastMessage("✅ Registro desactivado");
 
     } catch (err) {
@@ -536,19 +547,49 @@ export default function App() {
   };
 
 
-  // Agrega un handler para las selecciones (checkboxes):
-  const handleRowSelect = (e) => {
-    // allRows es una array que contiene todos los renglones de la tabla
-    // la info del renglon se encuentra en original, y el id es el indice de la columna del arreglo, o el orden en que se muestra en la tabla
-    const allRows = e.detail.rowsById;
-    // objeto de tipo {0: true, 1: true} según el indice de row que esta seleccionado
-    const rowsSelected = e.detail.selectedRowsIds;
+  const handleRowClick = (row) => {
+    const rowKey = {
+      sociedad: row.sociedad,
+      sucursal: row.sucursal,
+      etiqueta: row.etiqueta,
+      valor: row.valor,
+      idg: row.idg,
+      idgroup: row.idgroup,
+      estado: row.estado,
+      info: row.info,
+      registro: row.registro,
+      ultMod: row.ultMod
+    };
 
-    const selectedRowssData = Object.keys(rowsSelected)
-      .filter(rowId => rowsSelected[rowId] === true) // Solo los que son true
-      .map(rowId => allRows[rowId].original);
+    setSelectedRowsArray((prev) => {
+      const isAlreadySelected = prev.some(
+        (r) =>
+          r.sociedad === rowKey.sociedad &&
+          r.sucursal === rowKey.sucursal &&
+          r.etiqueta === rowKey.etiqueta &&
+          r.valor === rowKey.valor &&
+          r.idg === rowKey.idg &&
+          r.idgroup === rowKey.idgroup
+      );
 
-    setSelectedRows(selectedRowssData);
+      if (isAlreadySelected) {
+        // Si ya está seleccionado, quitarlo
+        return prev.filter(
+          (r) =>
+            !(
+              r.sociedad === rowKey.sociedad &&
+              r.sucursal === rowKey.sucursal &&
+              r.etiqueta === rowKey.etiqueta &&
+              r.valor === rowKey.valor &&
+              r.idg === rowKey.idg &&
+              r.idgroup === rowKey.idgroup
+            )
+        );
+      } else {
+        // Si no está seleccionado, agregarlo
+        return [...prev, rowKey];
+      }
+    });
   };
 
   const isSameRow = (row1, row2) => {
@@ -765,7 +806,7 @@ export default function App() {
               value={filters.search}
               onInput={(e) => updateFilter("search", e.target.value)}
               onClear={() => updateFilter("search", "")}
-              
+
             />
 
             <SegmentedButton onSelectionChange={handleStatusFilterChange}>
@@ -784,7 +825,7 @@ export default function App() {
               className="btn-filter"
               icon="filter"
               design={ButtonDesign.Default}
-              onClick={handleRefresh}
+              onClick={() => {}}
             />
           </div>
         </div>
@@ -821,7 +862,17 @@ export default function App() {
               const isExpanded = isSameRow(expandedRowId, row);
               return (
                 <React.Fragment key={`${row.sociedad}|${row.sucursal}|${row.etiqueta}|${row.valor}|${row.idgroup}|${row.idg}`}>
-                  <TableRow>
+                  <TableRow
+                    onClick={() => handleRowClick(row)}
+                    style={{
+                      cursor: 'pointer',
+                      backgroundColor: isRowSelected(row) ? '#d1eaff' : 'transparent',
+                      borderLeft: isRowSelected(row) ? '4px solid #0070f0' : '4px solid transparent',
+                      borderRight: isRowSelected(row) ? '1px solid #0070f0' : '1px solid transparent',
+                      boxShadow: isRowSelected(row) ? '0 2px 8px rgba(0, 112, 240, 0.4)' : 'none',
+                      transition: 'all 0.2s ease-in-out'
+                    }}
+                  >
                     <TableCell>
                       <div style={{ display: "flex", justifyContent: "center" }}>
                         <CheckBox
@@ -834,7 +885,8 @@ export default function App() {
                               r.idg === row.idg &&
                               r.idgroup === row.idgroup
                           )}
-                          onChange={(e) => {
+                          onClick={(e) => {
+                            e.stopPropagation();
                             const isChecked = e.target.checked;
 
                             const rowKey = {
