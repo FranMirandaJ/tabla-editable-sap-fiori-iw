@@ -50,7 +50,7 @@ const URL_BASE_BACKEND_MIGUEL = "http://localhost:3034";
 
 export default function App() {
   // --- Estados originales ---
-  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isModalCreateOpen, setIsModalCreateOpen] = useState(false);
   const [isEditGrupoETModalOpen, setIsEditGrupoETModalOpen] = useState(false);
   const [data, setData] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -803,7 +803,7 @@ export default function App() {
               className="btn-crear"
               icon="add"
               design={ButtonDesign.Positive}
-              onClick={() => setIsModalOpen(true)}
+              onClick={() => setIsModalCreateOpen(true)}
               disabled={loading}
             >
               Crear
@@ -1206,10 +1206,10 @@ export default function App() {
       </div>
 
       {/* Modal */}
-      {isModalOpen &&
+      {isModalCreateOpen &&
         <ModalCrear
-          isModalOpen={isModalOpen}
-          handleCloseModal={() => setIsModalOpen(false)}
+          isModalOpen={isModalCreateOpen}
+          handleCloseModal={() => setIsModalCreateOpen(false)}
           dbConnection={dbConnection}
           refetchData={fetchData}
           sociedadesCatalog={sociedadesCatalog}
