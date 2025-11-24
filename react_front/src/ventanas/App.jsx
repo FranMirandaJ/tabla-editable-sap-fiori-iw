@@ -681,8 +681,61 @@ export default function App() {
 
   };
 
-  // Antes del return, se calcula los datos filtrados:
+  // se calculan los datos filtrados:
   const filteredData = applyFilters(data);
+
+  // Función para seleccionar/deseleccionar todas las filas
+  const handleSelectAll = (e) => {
+    const isChecked = e.target.checked;
+
+    if (isChecked) {
+      // Seleccionar todas las filas visibles (filtradas)
+      const allRowKeys = filteredData.map(row => ({
+        sociedad: row.sociedad,
+        sucursal: row.sucursal,
+        etiqueta: row.etiqueta,
+        valor: row.valor,
+        idg: row.idg,
+        idgroup: row.idgroup,
+        estado: row.estado,
+        info: row.info,
+        registro: row.registro,
+        ultMod: row.ultMod
+      }));
+      setSelectedRowsArray(allRowKeys);
+    } else {
+      // Deseleccionar todas
+      setSelectedRowsArray([]);
+    }
+  };
+
+  // Verificar si todas las filas están seleccionadas
+  const areAllRowsSelected = filteredData.length > 0 &&
+    filteredData.every(row =>
+      selectedRowsArray.some(
+        selected =>
+          selected.sociedad === row.sociedad &&
+          selected.sucursal === row.sucursal &&
+          selected.etiqueta === row.etiqueta &&
+          selected.valor === row.valor &&
+          selected.idg === row.idg &&
+          selected.idgroup === row.idgroup
+      )
+    );
+
+  // Verificar si algunas filas están seleccionadas (estado indeterminado)
+  const areSomeRowsSelected = filteredData.length > 0 &&
+    filteredData.some(row =>
+      selectedRowsArray.some(
+        selected =>
+          selected.sociedad === row.sociedad &&
+          selected.sucursal === row.sucursal &&
+          selected.etiqueta === row.etiqueta &&
+          selected.valor === row.valor &&
+          selected.idg === row.idg &&
+          selected.idgroup === row.idgroup
+      )
+    ) && !areAllRowsSelected;
 
   return (
     <>
@@ -825,7 +878,7 @@ export default function App() {
               className="btn-filter"
               icon="filter"
               design={ButtonDesign.Default}
-              onClick={() => {}}
+              onClick={() => { }}
             />
           </div>
         </div>
@@ -836,7 +889,17 @@ export default function App() {
             style={{ width: "1500px" }}
             headerRow={
               <TableHeaderRow sticky>
-                {columns.map((column, index) => (
+                {/* Checkbox general en el header */}
+                <TableHeaderCell>
+                  <div style={{ display: "flex", justifyContent: "center" }}>
+                    <CheckBox
+                      checked={areAllRowsSelected}
+                      indeterminate={areSomeRowsSelected}
+                      onChange={handleSelectAll}
+                    />
+                  </div>
+                </TableHeaderCell>
+                {columns.slice(1).map((column, index) => (
                   <TableHeaderCell key={index}>{column.Header}</TableHeaderCell>
                 ))}
               </TableHeaderRow>
