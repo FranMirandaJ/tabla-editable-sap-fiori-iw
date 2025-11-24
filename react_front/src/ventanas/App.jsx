@@ -111,6 +111,7 @@ export default function App() {
           row.etiqueta?.toString().toLowerCase().includes(searchLower) ||
           row.valor?.toString().toLowerCase().includes(searchLower) ||
           row.idgroup?.toString().toLowerCase().includes(searchLower) ||
+          row.idg?.toString().toLowerCase().includes(searchLower) ||
           row.info?.toString().toLowerCase().includes(searchLower);
 
         if (!matchesSearch) return false;
@@ -132,14 +133,6 @@ export default function App() {
 
     const selectedFilter = text.toString().toLowerCase();
     updateFilter("status", selectedFilter);
-  };
-
-  const handleSearch = (e) => {
-    updateFilter("search", e.detail.value);
-  };
-
-  const handleClearSearch = () => {
-    updateFilter("search", "");
   };
 
   // --- Cambio de conexión ---
@@ -324,6 +317,7 @@ export default function App() {
       showToastMessage("❌ Completa Sociedad, CEDI, Etiqueta, Valor, Grupo Etiqueta y ID.");
       return;
     }
+    setLoading(true);
     try {
       const url = `${URL_BASE}/api/security/gruposet/crud?ProcessType=UpdateOne&DBServer=${dbConnection}&LoggedUser=FMIRANDAJ`;
 
@@ -377,6 +371,8 @@ export default function App() {
     } catch (error) {
       console.error("Error al guardar cambios:", error);
       showToastMessage("❌ No se pudieron guardar los cambios");
+    } finally {
+      setLoading(false);
     }
 
   }
@@ -767,8 +763,9 @@ export default function App() {
             <Search
               placeholder="Buscar..."
               value={filters.search}
-              onInput={handleSearch}
-              onClear={handleClearSearch}
+              onInput={(e) => updateFilter("search", e.target.value)}
+              onClear={() => updateFilter("search", "")}
+              
             />
 
             <SegmentedButton onSelectionChange={handleStatusFilterChange}>
@@ -940,6 +937,7 @@ export default function App() {
                           placeholder="Selecciona una sociedad"
                           filter="Contains"
                           style={{ width: '400px' }}
+                          disabled={loading}
                         >
                           {sociedadesCatalog.map(item =>
                             <ComboBoxItem key={item.key} data-key={item.key} text={item.text} />
@@ -950,7 +948,7 @@ export default function App() {
                         <ComboBox
                           className="modal-combobox"
                           value={`Cedi ${editingRowData.sucursal}`}
-                          disabled={!editingRowData.sociedad}
+                          disabled={!editingRowData.sociedad || loading}
                           onSelectionChange={(e) => {
                             const selectedItem = e.detail.item;
                             const selectedKey = selectedItem?.dataset.key;
@@ -981,7 +979,7 @@ export default function App() {
                         <ComboBox
                           className="modal-combobox"
                           value={editingRowData.etiqueta}
-                          disabled={!editingRowData.sucursal}
+                          disabled={!editingRowData.sucursal || loading}
                           onSelectionChange={(e) => {
                             const selectedItem = e.detail.item;
                             const selectedKey = selectedItem?.dataset.key;
@@ -1010,7 +1008,7 @@ export default function App() {
                         <ComboBox
                           className="modal-combobox"
                           value={editingRowData.valor}
-                          disabled={!editingRowData.etiqueta}
+                          disabled={!editingRowData.etiqueta || loading}
                           onSelectionChange={(e) => {
                             const selectedItem = e.detail.item;
                             const selectedKey = selectedItem?.dataset.key;
@@ -1032,17 +1030,17 @@ export default function App() {
                             icon="edit"
                             design="Transparent"
                             onClick={() => setIsEditGrupoETModalOpen(true)}
-                            disabled={!editingRowData?.sociedad || !editingRowData?.sucursal}
+                            disabled={!editingRowData?.sociedad || !editingRowData?.sucursal || loading}
                             title="Editar Grupo ET"
                             style={{ alignSelf: 'flex-start' }}
                           />
                         </FlexBox>
                       </TableCell>
                       <TableCell>
-                        <Input name="idg" value={editingRowData?.idg || ''} onInput={handleEditInputChange} />
+                        <Input name="idg" value={editingRowData?.idg || ''} onInput={handleEditInputChange} disabled={loading} />
                       </TableCell>
                       <TableCell>
-                        <Input name="info" value={editingRowData?.info || ''} onInput={handleEditInputChange} />
+                        <Input name="info" value={editingRowData?.info || ''} onInput={handleEditInputChange} disabled={loading} />
                       </TableCell>
                       <TableCell>
                         {/* El registro generalmente no es editable */}
@@ -1061,12 +1059,14 @@ export default function App() {
                               e.stopPropagation();
                               handleGuardarCambiosEdicion(editingRowData, originalRowData);
                             }}
+                            disabled={loading}
                           >
                             Guardar
                           </Button>
                           <Button
                             icon="decline"
                             design="Negative"
+                            disabled={loading}
                             onClick={(e) => {
                               e.stopPropagation();
                               setExpandedRowId(null); // Simplemente cierra la fila
