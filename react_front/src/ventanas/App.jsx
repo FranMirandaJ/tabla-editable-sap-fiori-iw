@@ -86,6 +86,12 @@ export default function App() {
   const [filters, setFilters] = useState({
     status: "todos",
     search: "",
+    sociedad: "",
+    cedis: "",
+    etiqueta: "",
+    valor: "",
+    fechaInicio: "",
+    fechaFin: ""
   });
 
   // Sistema de filtros general
@@ -98,13 +104,13 @@ export default function App() {
 
   const applyFilters = (data) => {
     return data.filter(row => {
-      // Filtro por estado
+      // Filtro por estado 
       if (filters.status !== "todos") {
         if (filters.status === "activos" && !row.estado) return false;
         if (filters.status === "inactivos" && row.estado) return false;
       }
 
-      // Filtro de búsqueda
+      // Filtro de búsqueda general
       if (filters.search) {
         const searchLower = filters.search.toLowerCase();
         const matchesSearch =
@@ -119,21 +125,63 @@ export default function App() {
         if (!matchesSearch) return false;
       }
 
+      // Filtros avanzados
+      if (filters.sociedad && row.sociedad?.toString() !== filters.sociedad) {
+        return false;
+      }
+
+      if (filters.cedis && row.sucursal?.toString() !== filters.cedis) {
+        return false;
+      }
+
+      if (filters.etiqueta && !row.etiqueta?.toString().toLowerCase().includes(filters.etiqueta.toLowerCase())) {
+        return false;
+      }
+
+      if (filters.valor && !row.valor?.toString().toLowerCase().includes(filters.valor.toLowerCase())) {
+        return false;
+      }
+
+      // Filtro por fecha - CORREGIDO
+      if (filters.fechaInicio || filters.fechaFin) {
+        // Extraer solo la fecha del campo registro (formato: "2025-11-24 05:39:35 (FMIRANDAJ)")
+        const fechaRegistro = row.registro?.split(' ')[0]; // Tomar solo "2025-11-24"
+
+        if (!fechaRegistro) return false; // Si no hay fecha, excluir el registro
+
+        const registroDate = new Date(fechaRegistro);
+
+        // Validar que la fecha sea válida
+        if (isNaN(registroDate.getTime())) {
+          console.warn('Fecha inválida en registro:', row.registro);
+          return false;
+        }
+
+        if (filters.fechaInicio) {
+          const startDate = new Date(filters.fechaInicio);
+          startDate.setHours(0, 0, 0, 0); // Establecer a inicio del día
+          if (registroDate < startDate) return false;
+        }
+
+        if (filters.fechaFin) {
+          const endDate = new Date(filters.fechaFin);
+          endDate.setHours(23, 59, 59, 999); // Establecer a fin del día
+          if (registroDate > endDate) return false;
+        }
+      }
+
       return true;
     });
   };
 
-  // Handlers específicos
   const handleStatusFilterChange = (e) => {
-
     const selectedItems = e.detail.selectedItems;
     if (!selectedItems || selectedItems.length === 0) return;
 
     const selectedItem = selectedItems[0];
-
     const text = selectedItem.textContent;
-
     const selectedFilter = text.toString().toLowerCase();
+
     updateFilter("status", selectedFilter);
   };
 
@@ -881,7 +929,7 @@ export default function App() {
               className="btn-filter"
               icon="filter"
               design={ButtonDesign.Default}
-              onClick={() => {setIsModalFiltersOpen(true)}}
+              onClick={() => { setIsModalFiltersOpen(true) }}
               disabled={loading}
             />
           </div>
