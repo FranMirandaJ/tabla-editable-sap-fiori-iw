@@ -11,7 +11,7 @@ import {
   Label,
   ComboBox,
   ComboBoxItem,
-  TextArea,
+  CheckBox,
   FlexBox,
   SideNavigation,
   SideNavigationItem,
@@ -25,7 +25,7 @@ import {
   TableHeaderCell,
   TableRow,
   TableCell,
-
+  Toast
 } from "@ui5/webcomponents-react";
 import ModalCrear from "../components/ModalCrear";
 import ButtonDesign from "@ui5/webcomponents/dist/types/ButtonDesign.js";
@@ -53,8 +53,7 @@ export default function App() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [data, setData] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [selectedRows, setSelectedRows] = useState(null);
-  const [clickedRow, setClickedRow] = useState(null);
+  //const [clickedRow, setClickedRow] = useState(null);
   const [expandedRowId, setExpandedRowId] = useState(null);
   const [editingRowData, setEditingRowData] = useState(null);
   const [originalRowData, setOriginalRowData] = useState(null);
@@ -76,9 +75,24 @@ export default function App() {
   const [filteredEtiquetasCatalog, setFilteredEtiquetasCatalog] = useState([]);
   const [filteredValoresCatalog, setFilteredValoresCatalog] = useState([]);
 
+  // Para mensajes en el toast
+  const [toastMessage, setToastMessage] = useState("");
+  const [showToast, setShowToast] = useState(false);
+
   // --- Cambio de conexión ---
   const handleSwitchChange = () => {
     setDbConnection(dbConnection === "MongoDB" ? "Azure" : "MongoDB");
+  };
+
+  // Función reutilizable para mostrar toast
+  const showToastMessage = (message) => {
+    setToastMessage(message);
+    setShowToast(true);
+
+    // Auto-ocultar después de 3 segundos
+    setTimeout(() => {
+      setShowToast(false);
+    }, 3000);
   };
 
   const fetchData = async () => {
@@ -109,6 +123,7 @@ export default function App() {
 
     } catch (error) {
       console.error("Error al obtener datos:", error);
+      setData([]);
     } finally {
       setLoading(false);
     }
@@ -227,85 +242,8 @@ export default function App() {
   }, [dbConnection]);
 
   const columns = [
-    {
-      accessor: "checkbox",
-      disableFilters: true,
-      disableSortBy: true,
-      disableGroupBy: true,
-      disableResizing: true,
-      width: 50,
-      Header: "", // Header vacío
-      Cell: ({ row }) => {
-        const renglon = row.original;
-        return (
-          <input
-            type="checkbox"
-            checked={selectedRowsArray.some(
-              (r) =>
-                r.sociedad === renglon.sociedad &&
-                r.sucursal === renglon.sucursal &&
-                r.etiqueta === renglon.etiqueta &&
-                r.valor === renglon.valor &&
-                r.idg === renglon.idg
-            )}
-            onChange={(e) => {
-              const isChecked = e.target.checked;
-              const rowKey = {
-                sociedad: renglon.sociedad,
-                sucursal: renglon.sucursal,
-                etiqueta: renglon.etiqueta,
-                valor: renglon.valor,
-                idg: renglon.idg
-              };
-
-              setSelectedRowsArray((prev) => {
-                if (isChecked) {
-                  return [...prev, rowKey];
-                } else {
-                  return prev.filter(
-                    (r) =>
-                      !(
-                        r.sociedad === rowKey.sociedad &&
-                        r.sucursal === rowKey.sucursal &&
-                        r.etiqueta === rowKey.etiqueta &&
-                        r.valor === rowKey.valor &&
-                        r.idg === rowKey.idg
-                      )
-                  );
-                }
-              });
-            }}
-          />
-        );
-      }
-    },
-    {
-      accessor: "expand",
-      disableFilters: true,
-      disableSortBy: true,
-      disableGroupBy: true,
-      disableResizing: true,
-      width: 50,
-      Cell: ({ row }) => {
-        const renglon = row.original;
-        return (
-          <FlexBox justifyContent="Start" alignItems="Center" style={{ width: "100%", height: "100%" }}>
-            <Button
-              icon={isSameRow(expandedRowId, renglon) ? "navigation-up-arrow" : "navigation-down-arrow"}
-              design="Transparent"
-              onClick={() => handleToggleExpand({
-                sociedad: renglon.sociedad,
-                sucursal: renglon.sucursal,
-                etiqueta: renglon.etiqueta,
-                valor: renglon.valor,
-                idg: renglon.idg
-              })}
-            />
-          </FlexBox>
-        )
-      }
-
-    },
+    { accessor: "checkbox", Header: "" },
+    { accessor: "expand" },
     { Header: "Sociedad", accessor: "sociedad" },
     { Header: "Sucursal (CEDIS)", accessor: "sucursal" },
     { Header: "Etiqueta", accessor: "etiqueta" },
@@ -315,29 +253,12 @@ export default function App() {
     { Header: "Información adicional", accessor: "info" },
     { Header: "Registro", accessor: "registro" },
     { Header: "Última modificación", accessor: "ultMod" },
-    {
-      Header: "Estado",
-      accessor: "estado",
-      hAlign: "Center",
-      Cell: ({ cell }) => {
-        const isActivo = cell.value;
-        return (
-          <FlexBox justifyContent="Center" alignItems="Center" style={{ width: "100%", height: "100%" }}>
-            <Icon
-              name={isActivo ? "accept" : "decline"}
-              style={{
-                backgroundColor: isActivo ? "var(--sapPositiveColor, #107e3e)" : "var(--sapNegativeColor, #b00)", color: "white", borderRadius: "50%", padding: "3px", width: "12px", height: "12px", boxShadow: "0 1px 2px rgba(0,0,0,0.2)"
-              }}
-            />
-          </FlexBox>
-        );
-      }
-    },
+    { Header: "Estado", accessor: "estado" },
   ];
 
   const handleGuardarCambiosEdicion = async (editedData, originalData) => {
     if (!editedData.sociedad || !editedData.sucursal || !editedData.etiqueta || !editedData.valor || !editedData.idgroup || !editedData.idg) {
-      alert("Completa Sociedad, CEDI, Etiqueta, Valor, Grupo Etiqueta y ID.");
+      showToastMessage("❌ Completa Sociedad, CEDI, Etiqueta, Valor, Grupo Etiqueta y ID.");
       return;
     }
     try {
@@ -377,42 +298,72 @@ export default function App() {
 
       if (!res.ok) {
         if (res.status === 409) {
-          alert("❌ Ya existe un registro con esa llave compuesta. No se puede actualizar.");
+          showToastMessage("❌ Ya existe un registro con esa llave compuesta.");
           return;
         }
         // Para otros errores, lanzamos una excepción para que la capture el catch.
         throw new Error("Error HTTP " + res.status + (json.messageUSR ? " - " + json.messageUSR : ""));
       }
 
-      alert("✅ Cambios guardados correctamente");
+      showToastMessage("✅ Cambios guardados correctamente");
 
       // 🔄 Refrescar tabl
       fetchData();
     } catch (error) {
       console.error("Error al guardar cambios:", error);
-      alert("❌ No se pudieron guardar los cambios");
+      showToastMessage("❌ No se pudieron guardar los cambios");
     }
 
   }
 
   const handleActivar = async () => {
-    // Verificar si hay una fila seleccionada
-    if (!clickedRow) {
-      alert("⚠️ Selecciona un registro de la tabla primero");
-      return;
-    }
+    if (selectedRowsArray.lenght > 1) return;
+    setLoading(true);
 
     try {
-      const url = `${URL_BASE}/api/security/gruposet/crud?ProcessType=UpdateOne&DBServer=${dbConnection}&LoggedUser=FMIRANDAJ`;
 
+      /* CODIGO PARA CUANDO SE QUIERE ACTIVAR TODOS LOS REGISTRO SELECCIONADOS */
+
+      // const numSelectedRows = selectedRowsArray.length;
+      // // Verificar si hay filas seleccionadas
+      // if (numSelectedRows === 0) {
+      //   alert("⚠️ Selecciona un registro de la tabla primero");
+      //   return;
+      // }
+      // const url = `${URL_BASE}/api/security/gruposet/crud?ProcessType=UpdateOne&DBServer=${dbConnection}&LoggedUser=FMIRANDAJ`;
+
+      // const promises = selectedRowsArray.map(async (row) => {
+      //   const payload = {
+      //     // Llaves para identificar el registro
+      //     IDSOCIEDAD: row.sociedad,
+      //     IDCEDI: row.sucursal,
+      //     IDETIQUETA: row.etiqueta,
+      //     IDVALOR: row.valor,
+      //     IDGRUPOET: row.idgroup,
+      //     ID: row.idg,
+      //     // Datos a actualizar
+      //     data: {
+      //       ACTIVO: true,
+      //       BORRADO: false
+      //     }
+      //   };
+      //   return axios.post(url, payload);
+      // });
+
+      // const response = await Promise.all(promises);
+
+      // de momento solo se puede desactivar uno a la vez.
+
+      const url = `${URL_BASE}/api/security/gruposet/crud?ProcessType=UpdateOne&DBServer=${dbConnection}&LoggedUser=FMIRANDAJ`;
+      const selectedRow = selectedRowsArray[0];
       const payload = {
         // Llaves para identificar el registro
-        IDSOCIEDAD: clickedRow.sociedad,
-        IDCEDI: clickedRow.sucursal,
-        IDETIQUETA: clickedRow.etiqueta,
-        IDVALOR: clickedRow.valor,
-        IDGRUPOET: clickedRow.idgroup,
-        ID: clickedRow.idg,
+        IDSOCIEDAD: selectedRow.sociedad,
+        IDCEDI: selectedRow.sucursal,
+        IDETIQUETA: selectedRow.etiqueta,
+        IDVALOR: selectedRow.valor,
+        IDGRUPOET: selectedRow.idgroup,
+        ID: selectedRow.idg,
         // Datos a actualizar
         data: {
           ACTIVO: true,
@@ -420,13 +371,11 @@ export default function App() {
         }
       };
 
-      console.log("📤 Activando registro:", payload);
-
       const response = await axios.post(url, payload);
 
-      console.log("📥 Respuesta:", response.data);
+      console.log("📥 Respuesta:", response);
 
-      alert("✅ Registro activado correctamente");
+      showToastMessage("✅ Registro activado correctamente");
 
       // 🔄 Refrescar la tabla
       fetchData();
@@ -434,59 +383,97 @@ export default function App() {
     } catch (err) {
       console.error("❌ Error al activar:", err);
       console.error("❌ Detalles:", err.response?.data);
-      alert(`❌ No se pudo activar: ${err.response?.data?.message || err.message}`);
+      showToastMessage("❌ No se pudo activar el registro");
+    } finally {
+      setLoading(false);
+      setSelectedRowsArray([]);
     }
   };
 
   const handleDesactivar = async () => {
-    if (!clickedRow) { alert("Selecciona un registro"); return; }
+    //if (!clickedRow) { alert("Selecciona un registro"); return; }
+
+    // de momento solo se puede desactivar uno a la vez.
+    if (selectedRowsArray.lenght > 1) return;
+    setLoading(true);
 
     try {
+      const selectedRow = selectedRowsArray[0];
       const payload = {
-        IDSOCIEDAD: clickedRow.sociedad,
-        IDCEDI: clickedRow.sucursal,
-        IDETIQUETA: clickedRow.etiqueta,
-        IDVALOR: clickedRow.valor,
-        IDGRUPOET: clickedRow.idgroup,
-        ID: clickedRow.idg
+        IDSOCIEDAD: selectedRow.sociedad,
+        IDCEDI: selectedRow.sucursal,
+        IDETIQUETA: selectedRow.etiqueta,
+        IDVALOR: selectedRow.valor,
+        IDGRUPOET: selectedRow.idgroup,
+        ID: selectedRow.idg
       };
 
       const url = `${URL_BASE}/api/security/gruposet/crud?ProcessType=DeleteOne&DBServer=${dbConnection}`;
-      await axios.post(url, payload);
+      const response = await axios.post(url, payload);
+      console.log("📥 Respuesta:", response);
 
-      alert("🟡 Registro desactivado");
+      showToastMessage("✅ Registro desactivado");
       // 🔄 Refrescar tabla
       fetchData();
 
     } catch (err) {
       console.error("Error al desactivar:", err);
-      alert("❌ No se pudo desactivar el registro");
+      showToastMessage("❌ No se pudo desactivar el registro");
+    } finally {
+      setLoading(false);
+      setSelectedRowsArray([]);
     }
   };
 
   const handleEliminarClick = async () => {
-    if (!selectedRows) { alert("Selecciona un registro"); return; }
+    if (selectedRowsArray.length === 0) { showToastMessage("ℹ️ No hay registros seleccionados."); return; }
+
+    const confirmar = window.confirm(
+      selectedRowsArray.length > 1
+        ? `¿Eliminar registros?`
+        : "¿Eliminar registro?"
+    );
+
+    if (!confirmar) return;
 
     try {
-      const payload = {
-        IDSOCIEDAD: selectedRows.sociedad,
-        IDCEDI: selectedRows.sucursal,
-        IDETIQUETA: selectedRows.etiqueta,
-        IDVALOR: selectedRows.valor,
-        IDGRUPOET: selectedRows.idgroup,
-        ID: selectedRows.idg
-      };
+      const numSelectedRows = selectedRowsArray.length;
+
+      setLoading(true);
 
       const url = `${URL_BASE}/api/security/gruposet/crud?ProcessType=DeleteHard&DBServer=${dbConnection}`;
-      await axios.post(url, payload);
 
-      alert("🟡 Registro eliminado con éxito");
+      const promises = selectedRowsArray.map(async (row) => {
+        const payload = {
+          IDSOCIEDAD: row.sociedad,
+          IDCEDI: row.sucursal,
+          IDETIQUETA: row.etiqueta,
+          IDVALOR: row.valor,
+          IDGRUPOET: row.idgroup,
+          ID: row.idg
+        };
+        return axios.post(url, payload);
+      });
+
+      const response = await Promise.all(promises);
+
+      console.log("📥 Respuesta:", response);
+
+      showToastMessage(
+        selectedRowsArray.length > 1
+          ? "✅ Registros eliminados correctamente."
+          : "✅ Registro eliminado correctamente."
+      );
       // 🔄 Refrescar tabla
       fetchData();
 
     } catch (err) {
-      console.error("Error al eliminar :", err);
-      alert("❌ No se pudo eliminar el registro");
+      console.error("Error al eliminar:", err);
+      const numSelectedRows = selectedRowsArray.length;
+      showToastMessage("❌ Error al eliminar los registros");
+    } finally {
+      setLoading(false);
+      setSelectedRowsArray([]);
     }
   };
 
@@ -582,7 +569,16 @@ export default function App() {
   };
 
   const handleRefresh = async () => {
-    console.log("refrescando, falta hacerlo.");
+    try {
+      fetchData();
+      showToastMessage("🔄 Información actualizada");
+      setExpandedRowId(null);
+      setEditingRowData(null);
+      setOriginalRowData(null);
+      setSelectedRowsArray([]);
+    } catch (error) {
+      showToastMessage("❌ Error al refrescar la información");
+    }
 
   };
 
@@ -663,16 +659,20 @@ export default function App() {
               icon="delete"
               design={ButtonDesign.Negative}
               onClick={handleEliminarClick}
-              disabled={!selectedRows}
+              disabled={selectedRowsArray.length === 0 || loading}
             >
-              Eliminar
+              Eliminar {selectedRowsArray.length > 1 ? `(${selectedRowsArray.length})` : ''}
             </Button>
             <Button
               className="btn-desactivar"
               icon="hide"
               design={ButtonDesign.Attention}
               onClick={handleDesactivar}
-              disabled={!selectedRows || !selectedRows.estado}
+              disabled={
+                selectedRowsArray.length !== 1 ||  // Si no hay exactamente 1 selección
+                !selectedRowsArray[0].estado ||   // O si no está activo
+                loading
+              }
             >
               Desactivar
             </Button>
@@ -681,7 +681,11 @@ export default function App() {
               icon="show"
               design={ButtonDesign.Positive}
               onClick={handleActivar}
-              disabled={!selectedRows || selectedRows.estado}
+              disabled={
+                selectedRowsArray.length !== 1 ||  // Si no hay exactamente 1 selección  
+                selectedRowsArray[0].estado ||    // O si está activo
+                loading
+              }
             >
               Activar
             </Button>
@@ -690,6 +694,7 @@ export default function App() {
               icon="refresh"
               design={ButtonDesign.Default}
               onClick={handleRefresh}
+              disabled={loading}
             >
               Refrescar
             </Button>
@@ -741,10 +746,10 @@ export default function App() {
                 ))}
               </TableHeaderRow>
             }
-            onRowClick={(ev) => {
-              const r = ev?.row?.original ?? ev?.detail?.row?.original ?? null;
-              if (r) setClickedRow(r);
-            }}
+            // onRowClick={(ev) => {
+            //   const r = ev?.row?.original ?? ev?.detail?.row?.original ?? null;
+            //   if (r) setClickedRow(r);
+            // }}
             overflowMode="Scroll"
           >
             {data.map((row) => {
@@ -753,47 +758,53 @@ export default function App() {
                 <React.Fragment key={`${row.sociedad}|${row.sucursal}|${row.etiqueta}|${row.valor}|${row.idgroup}|${row.idg}`}>
                   <TableRow>
                     <TableCell>
-                      <input
-                        type="checkbox"
-                        checked={selectedRowsArray.some(
-                          (r) =>
-                            r.sociedad === row.sociedad &&
-                            r.sucursal === row.sucursal &&
-                            r.etiqueta === row.etiqueta &&
-                            r.valor === row.valor &&
-                            r.idg === row.idg
-                        )}
-                        onChange={(e) => {
-                          const isChecked = e.target.checked;
+                      <div style={{ display: "flex", justifyContent: "center" }}>
+                        <CheckBox
+                          checked={selectedRowsArray.some(
+                            (r) =>
+                              r.sociedad === row.sociedad &&
+                              r.sucursal === row.sucursal &&
+                              r.etiqueta === row.etiqueta &&
+                              r.valor === row.valor &&
+                              r.idg === row.idg &&
+                              r.idgroup === row.idgroup
+                          )}
+                          onChange={(e) => {
+                            const isChecked = e.target.checked;
 
-                          const rowKey = {
-                            sociedad: row.sociedad,
-                            sucursal: row.sucursal,
-                            etiqueta: row.etiqueta,
-                            valor: row.valor,
-                            idg: row.idg
-                          };
+                            const rowKey = {
+                              sociedad: row.sociedad,
+                              sucursal: row.sucursal,
+                              etiqueta: row.etiqueta,
+                              valor: row.valor,
+                              idg: row.idg,
+                              idgroup: row.idgroup,
+                              estado: row.estado,
+                              info: row.info,
+                              registro: row.registro,
+                              ultMod: row.ultMod
+                            };
 
-                          setSelectedRowsArray((prev) => {
-                            if (isChecked) {
-                              // agregar si no existe
-                              return [...prev, rowKey];
-                            } else {
-                              // quitar
-                              return prev.filter(
-                                (r) =>
-                                  !(
-                                    r.sociedad === rowKey.sociedad &&
-                                    r.sucursal === rowKey.sucursal &&
-                                    r.etiqueta === rowKey.etiqueta &&
-                                    r.valor === rowKey.valor &&
-                                    r.idg === rowKey.idg
-                                  )
-                              );
-                            }
-                          });
-                        }}
-                      />
+                            setSelectedRowsArray((prev) => {
+                              if (isChecked) {
+                                return [...prev, rowKey];
+                              } else {
+                                return prev.filter(
+                                  (r) =>
+                                    !(
+                                      r.sociedad === rowKey.sociedad &&
+                                      r.sucursal === rowKey.sucursal &&
+                                      r.etiqueta === rowKey.etiqueta &&
+                                      r.valor === rowKey.valor &&
+                                      r.idg === rowKey.idg &&
+                                      r.idgroup === rowKey.idgroup
+                                    )
+                                );
+                              }
+                            });
+                          }}
+                        />
+                      </div>
                     </TableCell>
 
                     <TableCell>
@@ -833,7 +844,7 @@ export default function App() {
                   </TableRow>
                   {isExpanded && (
                     <TableRow className="expanded-row">
-                      {/* Celda vacía para el botón de expandir */}
+                      <TableCell />
                       <TableCell />
                       <TableCell>
                         <ComboBox
@@ -1067,6 +1078,22 @@ export default function App() {
           </FlexBox>
         </Dialog>
       )}
+
+      {/* 🔹 TOAST GENERAL */}
+      <Toast
+        open={showToast}
+        onClose={() => setShowToast(false)}
+        placement="BottomCenter"
+        duration={3000}
+        style={{
+          zIndex: 10000,
+          position: 'fixed',
+          bottom: '2rem',
+          right: '2rem'
+        }}
+      >
+        {toastMessage}
+      </Toast>
     </>
   );
 }
