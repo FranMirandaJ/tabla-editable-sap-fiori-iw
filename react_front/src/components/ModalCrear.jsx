@@ -26,8 +26,11 @@ const ModalCrear = ({
     sociedadesCatalog,
     cedisCatalog,
     etiquetasCatalog,
-    valoresCatalog
+    valoresCatalog,
+    showToastMessage,
 }) => {
+
+    const [isLoading, setIsLoading] = useState(false);
 
     // Estados para los catálogos filtrados
     const [filteredCedisCatalog, setFilteredCedisCatalog] = useState([]);
@@ -51,6 +54,12 @@ const ModalCrear = ({
     const [isModalEditGrupoETOpen, setIsModalEditGrupoETOpen] = useState(false);
 
     const handleGuardar = async () => {
+        setIsLoading(true);
+        if (!sociedad || !cedis || !etiqueta || !valor || !grupoET || !id) {
+            showToastMessage("❌ Completa Sociedad, CEDI, Etiqueta, Valor, Grupo Etiqueta y ID.");
+            setIsLoading(false);
+            return;
+        }
         try {
             const registro = {
                 IDSOCIEDAD: Number(sociedad),
@@ -66,9 +75,6 @@ const ModalCrear = ({
             const processType = "Create";
             const url = `${URL_BASE_BACKEND_CINNALOVERS}/api/security/gruposet/crud?ProcessType=${processType}&DBServer=${dbConnection}&LoggedUser=${LOGGED_USER}`;
 
-            console.log(`📤 Enviando ${processType} a:`, url);
-            console.log("📦 Datos:", registro);
-
             const res = await axios.post(url, registro, {
                 headers: {
                     "Content-Type": "application/json",
@@ -76,24 +82,25 @@ const ModalCrear = ({
             });
 
             if (res.data?.success || res.status === 200) {
-                alert(`✅ Registro creado correctamente`);
-
+                limpiarFormulario();
                 refetchData();
+                handleCloseModal();
+                showToastMessage(`✅ Registro creado correctamente`);
             } else {
-                alert(`⚠️ Error al crear el registro`);
+                showToastMessage(`⚠️ Error al crear el registro`);
             }
 
-            limpiarFormulario();
-            handleCloseModal();
         } catch (error) {
             if (error.status === 409) {
-                alert("❌ Ya existe un registro con esos datos. No se puede actualizar.");
+                showToastMessage("❌ Ya existe un registro con esos datos. No se puede actualizar.");
             } else {
                 console.error("❌ Error al guardar:", error);
-                alert("Error al guardar el registro: " + error.message);
+                showToastMessage("Error al guardar el registro: " + error.message);
             }
             //limpiarFormulario();
             //handleCloseModal();
+        } finally {
+            setIsLoading(false);
         }
     };
 
@@ -135,6 +142,9 @@ const ModalCrear = ({
                                     design={ButtonDesign.Emphasized}
                                     onClick={handleGuardar}
                                     className="btn-guardar-modal"
+                                    loading={isLoading}
+                                    disabled={isLoading}
+                                    loadingText="Guardando..."
                                 >
                                     Guardar cambios
                                 </Button>

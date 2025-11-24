@@ -51,6 +51,7 @@ const URL_BASE_BACKEND_MIGUEL = "http://localhost:3034";
 export default function App() {
   // --- Estados originales ---
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isEditGrupoETModalOpen, setIsEditGrupoETModalOpen] = useState(false);
   const [data, setData] = useState([]);
   const [loading, setLoading] = useState(true);
   //const [clickedRow, setClickedRow] = useState(null);
@@ -78,6 +79,68 @@ export default function App() {
   // Para mensajes en el toast
   const [toastMessage, setToastMessage] = useState("");
   const [showToast, setShowToast] = useState(false);
+
+  // Para los filtrados
+  const [filters, setFilters] = useState({
+    status: "todos",
+    search: "",
+  });
+
+  // Sistema de filtros general
+  const updateFilter = (filterName, filterValue) => {
+    setFilters(prev => ({
+      ...prev,
+      [filterName]: filterValue
+    }));
+  };
+
+  const applyFilters = (data) => {
+    return data.filter(row => {
+      // Filtro por estado
+      if (filters.status !== "todos") {
+        if (filters.status === "activos" && !row.estado) return false;
+        if (filters.status === "inactivos" && row.estado) return false;
+      }
+
+      // Filtro de búsqueda
+      if (filters.search) {
+        const searchLower = filters.search.toLowerCase();
+        const matchesSearch =
+          row.sociedad?.toString().toLowerCase().includes(searchLower) ||
+          row.sucursal?.toString().toLowerCase().includes(searchLower) ||
+          row.etiqueta?.toString().toLowerCase().includes(searchLower) ||
+          row.valor?.toString().toLowerCase().includes(searchLower) ||
+          row.idgroup?.toString().toLowerCase().includes(searchLower) ||
+          row.info?.toString().toLowerCase().includes(searchLower);
+
+        if (!matchesSearch) return false;
+      }
+
+      return true;
+    });
+  };
+
+  // Handlers específicos
+  const handleStatusFilterChange = (e) => {
+
+    const selectedItems = e.detail.selectedItems;
+    if (!selectedItems || selectedItems.length === 0) return;
+
+    const selectedItem = selectedItems[0];
+
+    const text = selectedItem.textContent;
+
+    const selectedFilter = text.toString().toLowerCase();
+    updateFilter("status", selectedFilter);
+  };
+
+  const handleSearch = (e) => {
+    updateFilter("search", e.detail.value);
+  };
+
+  const handleClearSearch = () => {
+    updateFilter("search", "");
+  };
 
   // --- Cambio de conexión ---
   const handleSwitchChange = () => {
@@ -305,9 +368,11 @@ export default function App() {
         throw new Error("Error HTTP " + res.status + (json.messageUSR ? " - " + json.messageUSR : ""));
       }
 
+
+      setExpandedRowId(null); // Cierra la fila después de guardar
       showToastMessage("✅ Cambios guardados correctamente");
 
-      // 🔄 Refrescar tabl
+      // 🔄 Refrescar tabla
       fetchData();
     } catch (error) {
       console.error("Error al guardar cambios:", error);
@@ -372,13 +437,10 @@ export default function App() {
       };
 
       const response = await axios.post(url, payload);
-
-      console.log("📥 Respuesta:", response);
-
-      showToastMessage("✅ Registro activado correctamente");
-
+      
       // 🔄 Refrescar la tabla
       fetchData();
+      showToastMessage("✅ Registro activado correctamente");
 
     } catch (err) {
       console.error("❌ Error al activar:", err);
@@ -410,11 +472,11 @@ export default function App() {
 
       const url = `${URL_BASE}/api/security/gruposet/crud?ProcessType=DeleteOne&DBServer=${dbConnection}`;
       const response = await axios.post(url, payload);
-      console.log("📥 Respuesta:", response);
 
-      showToastMessage("✅ Registro desactivado");
       // 🔄 Refrescar tabla
       fetchData();
+      
+      showToastMessage("✅ Registro desactivado");
 
     } catch (err) {
       console.error("Error al desactivar:", err);
@@ -570,7 +632,7 @@ export default function App() {
 
   const handleRefresh = async () => {
     try {
-      fetchData();
+      await fetchData();
       showToastMessage("🔄 Información actualizada");
       setExpandedRowId(null);
       setEditingRowData(null);
@@ -582,7 +644,8 @@ export default function App() {
 
   };
 
-  const [isEditGrupoETModalOpen, setIsEditGrupoETModalOpen] = useState(false);
+  // Antes del return, se calcula los datos filtrados:
+  const filteredData = applyFilters(data);
 
   return (
     <>
@@ -703,27 +766,21 @@ export default function App() {
           <div className="search-bar" style={{ display: "flex", gap: 10 }}>
             <Search
               placeholder="Buscar..."
-              onClose={() => { }}
-              onInput={() => { }}
-              onOpen={() => { }}
-              onScopeChange={() => { }}
-              onSearch={() => { }}
+              value={filters.search}
+              onInput={handleSearch}
+              onClear={handleClearSearch}
             />
 
-            <SegmentedButton
-              onSelectionChange={() => { }}
-            >
-              <>
-                <SegmentedButtonItem>
-                  Todos
-                </SegmentedButtonItem>
-                <SegmentedButtonItem>
-                  Activos
-                </SegmentedButtonItem>
-                <SegmentedButtonItem>
-                  Inactivos
-                </SegmentedButtonItem>
-              </>
+            <SegmentedButton onSelectionChange={handleStatusFilterChange}>
+              <SegmentedButtonItem data-key="0" pressed={filters.status === "todos"}>
+                Todos
+              </SegmentedButtonItem>
+              <SegmentedButtonItem data-key="1" pressed={filters.status === "activos"}>
+                Activos
+              </SegmentedButtonItem>
+              <SegmentedButtonItem data-key="2" pressed={filters.status === "inactivos"}>
+                Inactivos
+              </SegmentedButtonItem>
             </SegmentedButton>
 
             <Button
@@ -751,8 +808,19 @@ export default function App() {
             //   if (r) setClickedRow(r);
             // }}
             overflowMode="Scroll"
+            noData={
+              <div style={{ padding: "2rem", textAlign: "center" }}>
+                <Icon name="search" style={{ fontSize: "3rem", marginBottom: "1rem" }} />
+                <div style={{ fontSize: "1.1rem", color: "#6a6a6a" }}>
+                  No se encontraron registros
+                </div>
+                <div style={{ fontSize: "0.9rem", color: "#8a8a8a", marginTop: "0.5rem" }}>
+                  {filters.search ? `Para la búsqueda: "${filters.search}"` : "Intenta ajustar los filtros"}
+                </div>
+              </div>
+            }
           >
-            {data.map((row) => {
+            {filteredData.map((row) => {
               const isExpanded = isSameRow(expandedRowId, row);
               return (
                 <React.Fragment key={`${row.sociedad}|${row.sucursal}|${row.etiqueta}|${row.valor}|${row.idgroup}|${row.idg}`}>
@@ -992,7 +1060,6 @@ export default function App() {
                             onClick={(e) => {
                               e.stopPropagation();
                               handleGuardarCambiosEdicion(editingRowData, originalRowData);
-                              setExpandedRowId(null); // Cierra la fila después de guardar
                             }}
                           >
                             Guardar
@@ -1032,6 +1099,7 @@ export default function App() {
           valoresCatalog={valoresCatalog}
           cedisCatalog={cedisCatalog}
           etiquetasCatalog={etiquetasCatalog}
+          showToastMessage={showToastMessage}
         />
 
       }
