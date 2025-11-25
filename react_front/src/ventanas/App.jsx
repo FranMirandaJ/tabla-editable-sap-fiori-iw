@@ -286,7 +286,7 @@ export default function App() {
         const etiquetas = [];
         const valores = [];
 
-        //console.log(registros);
+        console.log("RESPUESTA DEL BACKEND DE MIGUEL: ",registros);
 
         registros.forEach((item) => {
           // SOCIEDADES
@@ -372,10 +372,10 @@ export default function App() {
         setValoresCatalog(valores);
         setSociedadesCatalog(sociedades);
 
-        // console.log("sociedad", sociedades);
-        // console.log("valores", valores);
-        // console.log("etiqeutas", etiquetas);
-        // console.log("cedis", cedis);
+        console.log("sociedad", sociedades);
+        console.log("valores", valores);
+        console.log("etiqeutas", etiquetas);
+        console.log("cedis", cedis);
 
       } catch (error) {
         console.error('Error fetching data:', error);
@@ -413,6 +413,13 @@ export default function App() {
         r.idg === row.idg &&
         r.idgroup === row.idgroup
     );
+  };
+
+  // Función para obtener el texto a mostrar en los ComboBox 
+  const getDisplayText = (catalog, key) => {
+    if (!key) return "";
+    const item = catalog.find(item => item.key.toString() === key.toString());
+    return item?.text || key;
   };
 
   const handleGuardarCambiosEdicion = async (editedData, originalData) => {
@@ -1001,7 +1008,7 @@ export default function App() {
             noData={<IllustratedMessage name="AddingColumns" />}
           >
 
-{/* ================================ MAPEO DE FILAS DE LA TABLA ======================================= */}
+            {/* ================================ MAPEO DE FILAS DE LA TABLA ======================================= */}
             {filteredData.map((row) => {
               const isExpanded = isSameRow(expandedRowId, row);
               row.textEtiqueta = etiquetasCatalog.find(e => e.key === row.etiqueta)?.text;
@@ -1107,7 +1114,7 @@ export default function App() {
                     </TableCell>
                   </TableRow>
 
-{/* ================================ FILA EXPANDIBLE DE EDICIÓN EN LINEA ======================================= */}
+                  {/* ================================ FILA EXPANDIBLE DE EDICIÓN EN LINEA ======================================= */}
                   {isExpanded && (
                     <TableRow className="expanded-row">
                       {/* ====== Celda para checkbox de seleccion ====== */}
@@ -1120,25 +1127,28 @@ export default function App() {
                       <TableCell>
                         <ComboBox
                           className="modal-combobox"
-                          value={`Sociedad ${editingRowData.sociedad}`}
+                          value={getDisplayText(sociedadesCatalog, editingRowData.sociedad)}
                           onSelectionChange={(e) => {
                             const selectedItem = e.detail.item;
                             const selectedKey = selectedItem?.dataset.key;
+
                             setEditingRowData(prev => ({
                               ...prev,
-                              sociedad: selectedKey,
+                              sociedad: selectedKey || "",
                               // Limpiar selecciones dependientes
                               sucursal: "",
                               etiqueta: "",
                               valor: "",
+                              idgroup: ""
                             }));
 
-                            setFilteredCedisCatalog([]);
+                            // Filtrar CEDIS
+                            const filtered = cedisCatalog.filter(c =>
+                              c.parentSoc?.toString() === selectedKey?.toString()
+                            );
+                            setFilteredCedisCatalog(filtered);
                             setFilteredEtiquetasCatalog([]);
                             setFilteredValoresCatalog([]);
-                            // Filtrar CEDIS
-                            const filtered = cedisCatalog.filter(c => c.parentSoc.toString() === selectedKey);
-                            setFilteredCedisCatalog(filtered);
                           }}
                           placeholder="Selecciona una sociedad"
                           filter="Contains"
@@ -1151,30 +1161,34 @@ export default function App() {
                         </ComboBox>
                       </TableCell>
 
-                       {/* ====== Sucursal - CEDIS  ====== */}
+                      {/* ====== Sucursal - CEDIS  ====== */}
                       <TableCell>
                         <ComboBox
                           className="modal-combobox"
-                          value={`Cedi ${editingRowData.sucursal}`}
-                          disabled={!editingRowData.sociedad || loading}
+                          value={getDisplayText(filteredCedisCatalog, editingRowData.sucursal)}
+                          disabled={!editingRowData.sociedad || filteredCedisCatalog.length === 0}
                           onSelectionChange={(e) => {
                             const selectedItem = e.detail.item;
                             const selectedKey = selectedItem?.dataset.key;
+
                             setEditingRowData(prev => ({
                               ...prev,
-                              sucursal: selectedKey,
+                              sucursal: selectedKey || "",
                               // limpiar selecciones dependientes
                               etiqueta: "",
                               valor: "",
+                              idgroup: ""
                             }));
 
-                            setFilteredEtiquetasCatalog([]);
-                            setFilteredValoresCatalog([]);
                             // Filtrar Etiquetas
-                            const filtered = etiquetasCatalog.filter(et => et.IDSOCIEDAD?.toString() === editingRowData.sociedad.toString() && et.IDCEDI?.toString() === selectedKey);
+                            const filtered = etiquetasCatalog.filter(et =>
+                              et.IDSOCIEDAD?.toString() === editingRowData.sociedad?.toString() &&
+                              et.IDCEDI?.toString() === selectedKey?.toString()
+                            );
                             setFilteredEtiquetasCatalog(filtered);
+                            setFilteredValoresCatalog([]);
                           }}
-                          placeholder="Selecciona un CEDI"
+                          placeholder={filteredCedisCatalog.length === 0 ? "No hay CEDIS disponibles" : "Selecciona un CEDI"}
                           filter="Contains"
                           style={{ width: '400px' }}
                         >
@@ -1184,28 +1198,31 @@ export default function App() {
                         </ComboBox>
                       </TableCell>
 
-                       {/* ====== Etiqueta ====== */}
+                      {/* ====== Etiqueta ====== */}
                       <TableCell>
                         <ComboBox
                           className="modal-combobox"
-                          value={etiquetasCatalog.find(et => et.key === editingRowData.etiqueta)?.text || editingRowData.etiqueta}
-                          disabled={!editingRowData.sucursal || loading}
+                          value={getDisplayText(filteredEtiquetasCatalog, editingRowData.etiqueta)}
+                          disabled={!editingRowData.sucursal || filteredEtiquetasCatalog.length === 0}
                           onSelectionChange={(e) => {
                             const selectedItem = e.detail.item;
                             const selectedKey = selectedItem?.dataset.key;
+
                             setEditingRowData(prev => ({
                               ...prev,
-                              etiqueta: selectedKey,
+                              etiqueta: selectedKey || "",
                               // Limpiar selección dependiente
                               valor: "",
+                              idgroup: ""
                             }));
 
-                            setFilteredValoresCatalog([]);
                             // Filtrar Valores
-                            const filtered = valoresCatalog.filter(v => v.parentEtiqueta === selectedKey);
+                            const filtered = valoresCatalog.filter(v =>
+                              v.parentEtiqueta?.toString() === selectedKey?.toString()
+                            );
                             setFilteredValoresCatalog(filtered);
                           }}
-                          placeholder="Selecciona una etiqueta"
+                          placeholder={filteredEtiquetasCatalog.length === 0 ? "No hay etiquetas disponibles" : "Selecciona una etiqueta"}
                           filter="Contains"
                           style={{ width: '400px' }}
                         >
@@ -1215,36 +1232,45 @@ export default function App() {
                         </ComboBox>
                       </TableCell>
 
-                       {/* ====== Valor ====== */}
+                      {/* ====== Valor ====== */}
                       <TableCell>
                         <ComboBox
                           className="modal-combobox"
-                          value={valoresCatalog.find(v => v.key === editingRowData.valor).text || editingRowData.valor}
-                          disabled={!editingRowData.etiqueta || loading}
+                          value={getDisplayText(filteredValoresCatalog, editingRowData.valor)}
+                          disabled={!editingRowData.etiqueta || filteredValoresCatalog.length === 0}
                           onSelectionChange={(e) => {
                             const selectedItem = e.detail.item;
                             const selectedKey = selectedItem?.dataset.key;
-                            setEditingRowData(prev => ({ ...prev, valor: selectedKey }));
+
+                            setEditingRowData(prev => ({
+                              ...prev,
+                              valor: selectedKey || ""
+                            }));
                           }}
-                          placeholder="Seleccione un valor"
+                          placeholder={filteredValoresCatalog.length === 0 ? "No hay valores disponibles" : "Seleccione un valor"}
                           filter="Contains"
                           style={{ width: '400px' }}
                         >
                           {filteredValoresCatalog.map(item =>
-                            <ComboBoxItem key={item.key} data-key={item.key} text={item.text} />
+                            <ComboBoxItem key={item.key} data-key={item.key} text={item.text || item.key} />
                           )}
                         </ComboBox>
                       </TableCell>
 
-                       {/* ====== Grupo ET ====== */}
+                      {/* ====== Grupo ET ====== */}
                       <TableCell>
                         <FlexBox direction="Column" style={{ gap: '0.5rem' }}>
-                          <Input name="idgroup" value={editingRowData?.idgroup || ''} disabled style={{ width: '100%' }} />
+                          <Input
+                            name="idgroup"
+                            value={editingRowData?.idgroup || ''}
+                            disabled
+                            style={{ width: '100%' }}
+                          />
                           <Button
                             icon="edit"
                             design="Transparent"
                             onClick={() => setIsEditGrupoETModalOpen(true)}
-                            disabled={!editingRowData?.sociedad || !editingRowData?.sucursal || loading}
+                            disabled={!editingRowData?.etiqueta || !editingRowData.valor || loading}
                             title="Editar Grupo ET"
                             style={{ alignSelf: 'flex-start' }}
                           />
@@ -1253,23 +1279,31 @@ export default function App() {
 
                       {/* ====== ID ====== */}
                       <TableCell>
-                        <Input name="idg" value={editingRowData?.idg || ''} onInput={handleEditInputChange} disabled={loading} />
+                        <Input
+                          name="idg"
+                          value={editingRowData?.idg || ''}
+                          onInput={handleEditInputChange}
+                          disabled={loading}
+                        />
                       </TableCell>
 
                       {/* ====== Info adicional ====== */}
                       <TableCell>
-                        <Input name="info" value={editingRowData?.info || ''} onInput={handleEditInputChange} disabled={loading} />
+                        <Input
+                          name="info"
+                          value={editingRowData?.info || ''}
+                          onInput={handleEditInputChange}
+                          disabled={loading}
+                        />
                       </TableCell>
 
                       {/* ====== Datos del registro ====== */}
                       <TableCell>
-                        {/* El registro generalmente no es editable */}
                         <span>{row.registro}</span>
                       </TableCell>
 
                       {/* ====== Datos de ult. modificacion ====== */}
                       <TableCell>
-                        {/* La última modificación no es editable */}
                         <span>{row.ultMod}</span>
                       </TableCell>
 
@@ -1293,22 +1327,22 @@ export default function App() {
                             disabled={loading}
                             onClick={(e) => {
                               e.stopPropagation();
-                              setExpandedRowId(null); // Simplemente cierra la fila
+                              setExpandedRowId(null);
                               setEditingRowData(null);
+                              setOriginalRowData(null);
                             }}
                           >
                             Cancelar
                           </Button>
                         </FlexBox>
                       </TableCell>
-
                     </TableRow>
                   )}
-{/* ================================ FIN FILA EXPANDIBLE DE EDICIÓN EN LINEA ======================================= */}
+                  {/* ================================ FIN FILA EXPANDIBLE DE EDICIÓN EN LINEA ======================================= */}
                 </React.Fragment>
               );
             })}
-{/* ================================ FIN DE MAPEO DE FILAS DE LA TABLA ======================================= */}
+            {/* ================================ FIN DE MAPEO DE FILAS DE LA TABLA ======================================= */}
           </Table>
 
         </div>
