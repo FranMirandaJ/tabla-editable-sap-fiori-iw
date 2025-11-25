@@ -10,23 +10,32 @@ import {
     ComboBoxItem,
     TextArea,
     FlexBox,
-    Icon,
 } from "@ui5/webcomponents-react";
 import ModalEditGrupoET from "./ModalEditGrupoET.jsx";
-
-// Constantes para consultar el backend del equipo de miguellopez corriendo en localhost
-const URL_BASE_BACKEND_MIGUEL = "http://localhost:3034";
+import ButtonDesign from "@ui5/webcomponents/dist/types/ButtonDesign.js";
 
 const URL_BASE_BACKEND_CINNALOVERS = "https://app-restful-sap-cds.onrender.com";
 const LOGGED_USER = "FMIRADAJ";
 
+const ModalCrear = ({
+    isModalOpen,
+    handleCloseModal,
+    dbConnection,
+    refetchData,
+    sociedadesCatalog,
+    cedisCatalog,
+    etiquetasCatalog,
+    valoresCatalog,
+    showToastMessage,
+}) => {
 
-const ModalCrear = ({ isModalOpen, handleCloseModal, dbConnection, refetchData }) => {
+    // console.log("catalogo sociedades ",sociedadesCatalog);
+    // console.log("catalogo cedis ",cedisCatalog);
+    // console.log("catalogo etiquetas ",etiquetasCatalog);
+    // console.log("catalogo valores ",valoresCatalog);
+    
 
-    const [sociedadesCatalog, setSociedadesCatalog] = useState([]);
-    const [cedisCatalog, setCedisCatalog] = useState([]);
-    const [etiquetasCatalog, setEtiquetasCatalog] = useState([]);
-    const [valoresCatalog, setValoresCatalog] = useState([]);
+    const [isLoading, setIsLoading] = useState(false);
 
     // Estados para los catálogos filtrados
     const [filteredCedisCatalog, setFilteredCedisCatalog] = useState([]);
@@ -39,126 +48,32 @@ const ModalCrear = ({ isModalOpen, handleCloseModal, dbConnection, refetchData }
     const [etiqueta, setEtiqueta] = useState("");
     const [valor, setValor] = useState("");
     const [grupoET, setGrupoET] = useState("");
-    const [id, setid] = useState("");
+    const [id, setId] = useState("");
     const [infoAdicional, setInfoAdicional] = useState("");
-
-    // console.log("sociedades",sociedadesCatalog);
-    // console.log("cedis", cedisCatalog);
-    // console.log("etiquetas", etiquetasCatalog);
-    // console.log("valores", valoresCatalog);
 
     const [isModalEditGrupoETOpen, setIsModalEditGrupoETOpen] = useState(false);
 
+    // Limpiar formulario cuando se cierra el modal
     useEffect(() => {
-        const fetchCatalogos = async () => {
-            if (!isModalOpen) return;
-            try {
-                const url = `${URL_BASE_BACKEND_MIGUEL}/api/cat/crudLabelsValues?ProcessType=GetAll&LoggedUser=MIGUELLOPEZ&DBServer=${dbConnection === "Azure" ? "CosmosDB" : "MongoDB"}`;
-                const response = await fetch(url, {
-                    method: "POST",
-                    headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({
-                        operations: [
-                            {
-                                collection: "LabelsValues",
-                                action: "GETALL",
-                                payload: {}
-                            }
-                        ]
-                    }),
-                });
-
-                if (!response.ok) {
-                    console.log(`Error HTTP: ${response.status}`);
-                }
-
-                const data = await response.json();
-                const registros = data.data?.[0]?.dataRes || [];
-
-                if (!Array.isArray(registros) || registros.length === 0) {
-                    return;
-                }
-
-                const sociedades = [];
-                const cedis = [];
-                const etiquetas = [];
-                const valores = [];
-
-                registros.forEach((item) => {
-                    // SOCIEDADES
-                    if (item.IDSOCIEDAD && !sociedades.some((s) => s.key === item.IDSOCIEDAD)) {
-                        sociedades.push({
-                            key: item.IDSOCIEDAD,
-                            text: `Sociedad ${item.IDSOCIEDAD}`,
-                        });
-                    }
-
-                    // CEDIS
-                    if (
-                        item.IDSOCIEDAD &&
-                        item.IDCEDI &&
-                        !cedis.some((c) => c.key === item.IDCEDI && c.parentSoc === item.IDSOCIEDAD)
-                    ) {
-                        cedis.push({
-                            key: item.IDCEDI,
-                            text: `Cedi ${item.IDCEDI}`,
-                            parentSoc: item.IDSOCIEDAD,
-                        });
-                    }
-
-                    // ETIQUETAS
-                    // Guardar etiqueta COMPLETA en etiquetasAll
-                    // ETIQUETAS (IDS reales + conservar COLECCION/SECCION para filtros)
-                    if (item.IDETIQUETA && item.IDSOCIEDAD && item.IDCEDI && !etiquetas.some((e) => e.key === item.IDETIQUETA)) {
-                        etiquetas.push({
-                            key: item.IDETIQUETA,
-                            text: item.IDETIQUETA,
-                            IDETIQUETA: item.IDETIQUETA,
-                            ETIQUETA: item.ETIQUETA,
-                            IDSOCIEDAD: item.IDSOCIEDAD,
-                            IDCEDI: item.IDCEDI,
-                            COLECCION: item.COLECCION || "",
-                            SECCION: item.SECCION || "",
-                            _raw: item
-                        });
-                    }
-
-                    const etiquetasSimplificadas = etiquetas.map(e => ({
-                        key: e.IDETIQUETA,
-                        text: e.ETIQUETA || e.IDETIQUETA,
-                        IDSOCIEDAD: e.IDSOCIEDAD,
-                        IDCEDI: e.IDCEDI
-                    }));
-
-                    // VALORES anidados
-                    if (Array.isArray(item.valores)) {
-                        item.valores.forEach((v) => {
-                            valores.push({
-                                key: v.IDVALOR,     // ID REAL
-                                text: v.IDVALOR,
-                                IDVALOR: v.IDVALOR,
-                                VALOR: v.VALOR,
-                                IDSOCIEDAD: v.IDSOCIEDAD,
-                                IDCEDI: v.IDCEDI,
-                                parentEtiqueta: item.IDETIQUETA
-                            });
-                        });
-                    }
-                });
-
-                setCedisCatalog(cedis);
-                setEtiquetasCatalog(etiquetas);
-                setValoresCatalog(valores);
-                setSociedadesCatalog(sociedades);
-
-            } catch (error) {
-                console.error('Error fetching data:', error);
-            }
+        if (!isModalOpen) {
+            limpiarFormulario();
         }
-        fetchCatalogos();
     }, [isModalOpen]);
 
+    // Función para obtener el texto a mostrar en los ComboBox
+    const getDisplayText = (catalog, key) => {
+        if (!key) return "";
+        const item = catalog.find(item => item.key.toString() === key.toString());
+        return item?.text || key;
+    };
+
     const handleGuardar = async () => {
+        setIsLoading(true);
+        if (!sociedad || !cedis || !etiqueta || !valor || !grupoET || !id) {
+            showToastMessage("❌ Completa Sociedad, CEDI, Etiqueta, Valor, Grupo Etiqueta y ID.");
+            setIsLoading(false);
+            return;
+        }
         try {
             const registro = {
                 IDSOCIEDAD: Number(sociedad),
@@ -174,9 +89,6 @@ const ModalCrear = ({ isModalOpen, handleCloseModal, dbConnection, refetchData }
             const processType = "Create";
             const url = `${URL_BASE_BACKEND_CINNALOVERS}/api/security/gruposet/crud?ProcessType=${processType}&DBServer=${dbConnection}&LoggedUser=${LOGGED_USER}`;
 
-            console.log(`📤 Enviando ${processType} a:`, url);
-            console.log("📦 Datos:", registro);
-
             const res = await axios.post(url, registro, {
                 headers: {
                     "Content-Type": "application/json",
@@ -184,24 +96,23 @@ const ModalCrear = ({ isModalOpen, handleCloseModal, dbConnection, refetchData }
             });
 
             if (res.data?.success || res.status === 200) {
-                alert(`✅ Registro creado correctamente`);
-
+                limpiarFormulario();
                 refetchData();
+                handleCloseModal();
+                showToastMessage(`✅ Registro creado correctamente`);
             } else {
-                alert(`⚠️ Error al crear el registro`);
+                showToastMessage(`⚠️ Error al crear el registro`);
             }
 
-            limpiarFormulario();
-            handleCloseModal();
         } catch (error) {
-            if (error.status === 409) {
-                alert("❌ Ya existe un registro con esos datos. No se puede actualizar.");
+            if (error.response?.status === 409) {
+                showToastMessage("❌ Ya existe un registro con esos datos. No se puede crear.");
             } else {
                 console.error("❌ Error al guardar:", error);
-                alert("Error al guardar el registro: " + error.message);
+                showToastMessage("Error al guardar el registro: " + (error.response?.data?.message || error.message));
             }
-            //limpiarFormulario();
-            //handleCloseModal();
+        } finally {
+            setIsLoading(false);
         }
     };
 
@@ -211,7 +122,7 @@ const ModalCrear = ({ isModalOpen, handleCloseModal, dbConnection, refetchData }
         setEtiqueta("");
         setValor("");
         setGrupoET("");
-        setid("");
+        setId("");
         setInfoAdicional("");
         // Limpiar también los catálogos filtrados
         setFilteredCedisCatalog([]);
@@ -230,22 +141,24 @@ const ModalCrear = ({ isModalOpen, handleCloseModal, dbConnection, refetchData }
                 stretch={false}
                 open={isModalOpen}
                 onAfterClose={handleCancelar}
-                headerText="Registro"
+                headerText="Crear Nuevo Registro"
                 style={{
-                    width: "600px",  // o el ancho que prefieras
-                    maxWidth: "90vw" // mantiene responsive
+                    width: "450px",
+                    maxWidth: "90vw"
                 }}
                 footer={
                     <Bar
                         endContent={
                             <>
                                 <Button
-                                    design="Emphasized"
-                                    icon="add"
+                                    design={ButtonDesign.Emphasized}
                                     onClick={handleGuardar}
                                     className="btn-guardar-modal"
+                                    loading={isLoading}
+                                    disabled={isLoading}
+                                    loadingText="Guardando..."
                                 >
-                                    Guardar cambios
+                                    Guardar
                                 </Button>
                                 <Button design="Transparent" onClick={handleCancelar}>
                                     Cancelar
@@ -256,177 +169,206 @@ const ModalCrear = ({ isModalOpen, handleCloseModal, dbConnection, refetchData }
                 }
                 className="modal-sku"
             >
-                <div className="modal-content">
+                <div className="modal-content" style={{ padding: "1rem" }}>
                     <FlexBox
                         direction="Column"
-                        justifyContent="Center"
-                        alignItems="Center"
-                        wrap="Nowrap"
-                        className="modal-form-fields"
                         style={{ gap: '1rem', width: '100%' }}
                     >
-                        <div className="modal-field">
-                            <Label required>Sociedad</Label>
+                        {/* Sociedad */}
+                        <div>
+                            <Label required>Sociedad:</Label>
                             <ComboBox
-                                className="modal-combobox"
-                                value={sociedad ? `Sociedad ${sociedad}` : ""}
+                                value={getDisplayText(sociedadesCatalog, sociedad)}
                                 onSelectionChange={(e) => {
                                     const selectedItem = e.detail.item;
                                     const selectedKey = selectedItem?.dataset.key;
-                                    setSociedad(selectedKey);
+                                    console.log("Sociedad seleccionada:", selectedKey);
+                                    setSociedad(selectedKey || "");
                                     // Limpiar selecciones dependientes
                                     setCedis("");
                                     setEtiqueta("");
                                     setValor("");
-                                    setFilteredCedisCatalog([]);
+                                    setGrupoET("");
+                                    // Filtrar CEDIS - asegurar comparación de strings
+                                    const filtered = cedisCatalog.filter(c =>
+                                        c.parentSoc?.toString() === selectedKey?.toString()
+                                    );
+                                    console.log("CEDIS filtrados:", filtered);
+                                    setFilteredCedisCatalog(filtered);
                                     setFilteredEtiquetasCatalog([]);
                                     setFilteredValoresCatalog([]);
-                                    // Filtrar CEDIS
-                                    const filtered = cedisCatalog.filter(c => c.parentSoc.toString() === selectedKey);
-                                    setFilteredCedisCatalog(filtered);
                                 }}
                                 placeholder="Selecciona una sociedad"
                                 filter="Contains"
-                                style={{ width: '400px' }}
+                                style={{ width: '100%' }}
                             >
                                 {sociedadesCatalog.map(item =>
-                                    <ComboBoxItem key={item.key} data-key={item.key} text={item.text} />
+                                    <ComboBoxItem
+                                        key={item.key}
+                                        data-key={item.key}
+                                        text={item.text}
+                                    />
                                 )}
                             </ComboBox>
                         </div>
 
-                        <div className="modal-field">
-                            <Label required>CEDI</Label>
+                        {/* CEDI */}
+                        <div>
+                            <Label required>CEDI:</Label>
                             <ComboBox
-                                className="modal-combobox"
-                                value={cedis ? `Cedi ${cedis}` : ""}
-                                disabled={!sociedad}
+                                value={getDisplayText(filteredCedisCatalog, cedis)}
+                                disabled={!sociedad || filteredCedisCatalog.length === 0}
                                 onSelectionChange={(e) => {
                                     const selectedItem = e.detail.item;
                                     const selectedKey = selectedItem?.dataset.key;
-                                    setCedis(selectedKey);
+                                    console.log("CEDI seleccionado:", selectedKey);
+                                    setCedis(selectedKey || "");
                                     // Limpiar selecciones dependientes
                                     setEtiqueta("");
                                     setValor("");
-                                    setFilteredEtiquetasCatalog([]);
-                                    setFilteredValoresCatalog([]);
-                                    // Filtrar Etiquetas
-                                    const filtered = etiquetasCatalog.filter(et => et.IDSOCIEDAD && et.IDCEDI && et.IDSOCIEDAD.toString() === sociedad && et.IDCEDI.toString() === selectedKey);
+                                    setGrupoET("");
+                                    // Filtrar Etiquetas - asegurar comparación de strings
+                                    const filtered = etiquetasCatalog.filter(et =>
+                                        et.IDSOCIEDAD?.toString() === sociedad?.toString() &&
+                                        et.IDCEDI?.toString() === selectedKey?.toString()
+                                    );
+                                    console.log("Etiquetas filtradas:", filtered);
                                     setFilteredEtiquetasCatalog(filtered);
+                                    setFilteredValoresCatalog([]);
                                 }}
-                                placeholder="Selecciona un CEDI"
+                                placeholder={filteredCedisCatalog.length === 0 ? "No hay CEDIS disponibles" : "Selecciona un CEDI"}
                                 filter="Contains"
-                                style={{ width: '400px' }}
+                                style={{ width: '100%' }}
                             >
                                 {filteredCedisCatalog.map(item =>
-                                    <ComboBoxItem key={item.key} data-key={item.key} text={item.text} />
+                                    <ComboBoxItem
+                                        key={item.key}
+                                        data-key={item.key}
+                                        text={item.text}
+                                    />
                                 )}
                             </ComboBox>
                         </div>
 
-                        <div className="modal-field">
-                            <Label required>Etiqueta</Label>
+                        {/* Etiqueta */}
+                        <div>
+                            <Label required>Etiqueta:</Label>
                             <ComboBox
-                                className="modal-combobox"
-                                value={etiqueta}
-                                disabled={!cedis}
+                                value={getDisplayText(filteredEtiquetasCatalog, etiqueta)}
+                                disabled={!cedis || filteredEtiquetasCatalog.length === 0}
                                 onSelectionChange={(e) => {
                                     const selectedItem = e.detail.item;
                                     const selectedKey = selectedItem?.dataset.key;
-                                    setEtiqueta(selectedKey);
+                                    console.log("Etiqueta seleccionada:", selectedKey);
+                                    setEtiqueta(selectedKey || "");
                                     // Limpiar selección dependiente
                                     setValor("");
-                                    setFilteredValoresCatalog([]);
+                                    setGrupoET("");
                                     // Filtrar Valores
-                                    const filtered = valoresCatalog.filter(v => v.parentEtiqueta === selectedKey);
+                                    const filtered = valoresCatalog.filter(v =>
+                                        v.parentEtiqueta === selectedKey
+                                    );
+                                    console.log("Valores filtrados:", filtered);
                                     setFilteredValoresCatalog(filtered);
                                 }}
-                                placeholder="Selecciona una etiqueta"
+                                placeholder={filteredEtiquetasCatalog.length === 0 ? "No hay etiquetas disponibles" : "Selecciona una etiqueta"}
                                 filter="Contains"
-                                style={{ width: '400px' }}
+                                style={{ width: '100%' }}
                             >
                                 {filteredEtiquetasCatalog.map(item =>
-                                    <ComboBoxItem key={item.key} data-key={item.key} text={item.text} />
+                                    <ComboBoxItem
+                                        key={item.key}
+                                        data-key={item.key}
+                                        text={item.text}
+                                    />
                                 )}
                             </ComboBox>
                         </div>
 
-                        <div className="modal-field">
-                            <Label required>Valor</Label>
+                        {/* Valor */}
+                        <div>
+                            <Label required>Valor:</Label>
                             <ComboBox
-                                className="modal-combobox"
-                                value={valor}
-                                disabled={!etiqueta}
+                                value={getDisplayText(filteredValoresCatalog, valor)}
+                                disabled={!etiqueta || filteredValoresCatalog.length === 0}
                                 onSelectionChange={(e) => {
                                     const selectedItem = e.detail.item;
                                     const selectedKey = selectedItem?.dataset.key;
-                                    setValor(selectedKey);
-                                    // No hay más campos que limpiar/filtrar
+                                    console.log("Valor seleccionado:", selectedKey);
+                                    setValor(selectedKey || "");
                                 }}
-                                placeholder="Seleccione un valor"
+                                placeholder={filteredValoresCatalog.length === 0 ? "No hay valores disponibles" : "Selecciona un valor"}
                                 filter="Contains"
-                                style={{ width: '400px' }}
+                                style={{ width: '100%' }}
                             >
                                 {filteredValoresCatalog.map(item =>
-                                    <ComboBoxItem key={item.key} data-key={item.key} text={item.text} />
+                                    <ComboBoxItem
+                                        key={item.key}
+                                        data-key={item.key}
+                                        text={item.text || item.key}
+                                    />
                                 )}
                             </ComboBox>
                         </div>
 
-                        <div className="modal-field">
-                            <Label required>Grupo ET</Label>
-                            <div className="grupo-et-container">
+                        {/* Grupo ET */}
+                        <div>
+                            <Label required>Grupo ET:</Label>
+                            <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
                                 <Input
-                                    icon={null}
-                                    type="Text"
-                                    valueState="None"
-                                    disabled={true}
                                     value={grupoET}
+                                    onChange={(e) => setGrupoET(e.target.value)}
+                                    placeholder="Grupo ET"
+                                    style={{ flex: 1 }}
+                                    disabled = {true}
                                 />
                                 <Button
                                     icon="edit"
+                                    design="Transparent"
                                     onClick={() => setIsModalEditGrupoETOpen(true)}
-                                    title="Editar Grupo ET"
-                                    className="btn-editar-grupo"
+                                    disabled={!sociedad || !cedis}
+                                    title="Generar Grupo ET"
                                 />
                             </div>
                         </div>
 
-                        <div className="modal-field">
-                            <Label required>ID</Label>
+                        {/* ID */}
+                        <div>
+                            <Label required>ID:</Label>
                             <Input
-                                className="modal-input"
                                 value={id}
-                                placeholder="id grupo"
-                                onChange={(e) => setid(e.target.value)}
-                                style={{ width: '400px' }}
+                                onChange={(e) => setId(e.target.value)}
+                                placeholder="ID del grupo"
+                                style={{ width: '100%' }}
+                            />
+                        </div>
+
+                        {/* Información adicional */}
+                        <div>
+                            <Label>Información adicional:</Label>
+                            <TextArea
+                                value={infoAdicional}
+                                onChange={(e) => setInfoAdicional(e.target.value)}
+                                placeholder="Información adicional..."
+                                style={{ width: '100%', minHeight: '80px' }}
+                                growing
+                                growingMaxLines={5}
                             />
                         </div>
                     </FlexBox>
-
-                    <div className="modal-field">
-                        <Label className="textarea-label">Información adicional</Label>
-                        <TextArea
-                            placeholder="Escriba información adicional..."
-                            className="modal-textarea"
-                            onChange={(e) => setInfoAdicional(e.target.value)}
-                            value={infoAdicional}
-                            style={{ width: '400px' }}
-                        />
-                    </div>
                 </div>
             </Dialog>
+
+            {/* Modal para editar Grupo ET */}
             <ModalEditGrupoET
                 isModalOpen={isModalEditGrupoETOpen}
-                handleCloseModal={() => {
-                    setIsModalEditGrupoETOpen(false);
-                }}
+                handleCloseModal={() => setIsModalEditGrupoETOpen(false)}
                 setGrupoET={setGrupoET}
                 dbConnection={dbConnection}
                 etiquetas={etiquetasCatalog}
+                valores={valoresCatalog}
                 sociedadSeleccionada={sociedad}
                 cediSeleccionado={cedis}
-                valores={valoresCatalog}
             />
         </>
     );
