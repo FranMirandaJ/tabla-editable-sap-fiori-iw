@@ -293,8 +293,8 @@ export default function App() {
           if (item.ETIQUETA === "Sociedades Corporativas" && item.IDETIQUETA === "SOCIEDAD") {
             item.valores.forEach(v => {
               sociedades.push({
-                key: v.IDVALOR,
-                text: v.VALOR,
+                key: v.IDSOCIEDAD, // ID LO QUE SE GUARDA EN BD
+                text: v.VALOR, // LO QUE SE MUESTRA EN UI
               });
             });
           }
@@ -303,9 +303,9 @@ export default function App() {
           if (item.ETIQUETA === "Centros de Distribución" && item.IDETIQUETA === "CEDI") {
             item.valores.forEach(v => {
               cedis.push({
-                key: v.IDVALOR,
-                text: v.VALOR,
-                parentSoc: v.IDVALORPA
+                key: v.IDCEDI, // ID LO QUE SE GUARDA EN BD
+                text: v.VALOR, // LO QUE SE MUESTRA EN UI
+                parentSoc: v.IDSOCIEDAD, // PARA REALIZAR FILTRADO, SEGUN SOCIEDAD SELECCIONADA
               });
             });
           }
@@ -316,28 +316,28 @@ export default function App() {
             item.ETIQUETA !== undefined && item.ETIQUETA !== null &&
             item.IDETIQUETA !== "SOCIEDAD" && item.IDETIQUETA !== "CEDI") {
             etiquetas.push({
-              key: item.IDETIQUETA,
-              text: item.ETIQUETA, // Ahora text está definido
+              key: item.IDETIQUETA, // ID QUE SE GUARDA EN BD
+              text: item.ETIQUETA, // LO QUE SE MUESTRA EN UI
               IDETIQUETA: item.IDETIQUETA,
               ETIQUETA: item.ETIQUETA,
-              IDSOCIEDAD: item.IDSOCIEDAD,
-              IDCEDI: item.IDCEDI,
-              COLECCION: item.COLECCION || "",
-              SECCION: item.SECCION || "",
+              IDSOCIEDAD: item.IDSOCIEDAD, // PARA REALIZAR FILTRADOS
+              IDCEDI: item.IDCEDI, // PARA REALIZAR FILTRADOS
+              COLECCION: item.COLECCION || "", // PARA MODAL DE FILTRO CREO
+              SECCION: item.SECCION || "", // PARA MODAL DE FILTRO CREO
               _raw: item
             });
           }
 
-          // OBTENER CATALOFGO DE VALORES
+          // OBTENER CATALOGO DE VALORES
           if (item.valores && Array.isArray(item.valores) && item.valores.length > 0) {
             item.valores.forEach((v) => {
               if (v.IDETIQUETA !== "CEDI" && v.IDETIQUETA !== "SOCIEDAD") { // SOLO TOMAR EN CUENTA CATALOGOS QUE SEAN DIFERENTE AL DE CEDIS O SOCIEDAD
                 valores.push({
-                  key: v.IDVALOR,     // ID REAL
-                  text: v.VALOR,
+                  key: v.IDVALOR,  // LO QUE SE GUARDA EN LA BD
+                  text: v.VALOR, // LO QUE SE MUESTRA EN LA UI
                   VALOR: v.VALOR,
                   IDVALOR: v.IDVALOR,
-                  IDSOCIEDAD: v.IDSOCIEDAD,
+                  IDSOCIEDAD: v.IDSOCIEDAD, // PARA HACER FILTRADOS
                   IDCEDI: v.IDCEDI,
                   parentEtiqueta: item.IDETIQUETA,
                 });
