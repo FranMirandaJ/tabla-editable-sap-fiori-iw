@@ -286,39 +286,35 @@ export default function App() {
         const etiquetas = [];
         const valores = [];
 
-        console.log("RESPUESTA DEL BACKEND DE MIGUEL: ",registros);
+        //console.log("RESPUESTA DEL BACKEND DE MIGUEL: ", registros);
 
-        registros.forEach((item) => {
-          // SOCIEDADES
-          if (item.IDSOCIEDAD && !sociedades.some((s) => s.key === item.IDSOCIEDAD) &&
-            item.parentEtiqueta !== "SOCIEDAD" &&
-            item.parentEtiqueta !== "CEDI") {
-            sociedades.push({
-              key: item.IDSOCIEDAD,
-              text: `Sociedad ${item.IDSOCIEDAD}`,
+        registros.forEach((item) => {          
+          // OBTENER CATALOGO DE SOCIEDADES
+          if (item.ETIQUETA === "Sociedades Corporativas" && item.IDETIQUETA === "SOCIEDAD") {
+            item.valores.forEach(v => {
+              sociedades.push({
+                key: v.IDVALOR,
+                text: v.VALOR,
+              });
             });
           }
 
-          // CEDIS
-          if (
-            item.IDSOCIEDAD &&
-            item.IDCEDI &&
-            !cedis.some((c) => c.key === item.IDCEDI && c.parentSoc === item.IDSOCIEDAD) &&
-            item.parentEtiqueta !== "CEDI" &&
-            item.parentEtiqueta !== "SOCIEDAD"
-          ) {
-            cedis.push({
-              key: item.IDCEDI,
-              text: `Cedi ${item.IDCEDI}`,
-              parentSoc: item.IDSOCIEDAD,
+          // OBTENER CATALOGO DE CEDIS
+          if (item.ETIQUETA === "Centros de Distribución" && item.IDETIQUETA === "CEDI") {
+            item.valores.forEach(v => {
+              cedis.push({
+                key: v.IDVALOR,
+                text: v.VALOR,
+                parentSoc: v.IDVALORPA
+              });
             });
           }
 
-          // ETIQUETAS - Solo agregar si ETIQUETA está definida
+          // OBTENER CATALOGO DE ETIQUETAS - Solo agregar si ETIQUETA está definida
           if (item.IDETIQUETA && item.IDSOCIEDAD && item.IDCEDI &&
             !etiquetas.some((e) => e.key === item.IDETIQUETA) &&
             item.ETIQUETA !== undefined && item.ETIQUETA !== null &&
-            item.IDETIQUETA !== "SOCIEDAD") {
+            item.IDETIQUETA !== "SOCIEDAD" && item.IDETIQUETA !== "CEDI") {
             etiquetas.push({
               key: item.IDETIQUETA,
               text: item.ETIQUETA, // Ahora text está definido
@@ -332,25 +328,10 @@ export default function App() {
             });
           }
 
-          //console.log(item.valores);
-
-          // VALORES anidados
-          // if (Array.isArray(item.valores)) {
-          //   item.valores.forEach((v) => {
-          //     valores.push({
-          //       key: v.IDVALOR,     // ID REAL
-          //       text: v.IDVALOR,
-          //       IDVALOR: v.IDVALOR,
-          //       VALOR: v.VALOR,
-          //       IDSOCIEDAD: v.IDSOCIEDAD,
-          //       IDCEDI: v.IDCEDI,
-          //       parentEtiqueta: item.IDETIQUETA
-          //     });
-          //   });
-          // }
+          // OBTENER CATALOFGO DE VALORES
           if (item.valores && Array.isArray(item.valores) && item.valores.length > 0) {
             item.valores.forEach((v) => {
-              if (v.IDETIQUETA !== "CEDI" && v.IDETIQUETA !== "SOCIEDAD") {
+              if (v.IDETIQUETA !== "CEDI" && v.IDETIQUETA !== "SOCIEDAD") { // SOLO TOMAR EN CUENTA CATALOGOS QUE SEAN DIFERENTE AL DE CEDIS O SOCIEDAD
                 valores.push({
                   key: v.IDVALOR,     // ID REAL
                   text: v.VALOR,
@@ -363,7 +344,6 @@ export default function App() {
               }
             });
           }
-
 
         });
 
@@ -605,6 +585,7 @@ export default function App() {
     if (!confirmar) return;
 
     try {
+
       const numSelectedRows = selectedRowsArray.length;
 
       setLoading(true);

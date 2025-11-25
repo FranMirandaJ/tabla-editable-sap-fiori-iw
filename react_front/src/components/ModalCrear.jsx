@@ -76,8 +76,8 @@ const ModalCrear = ({
         }
         try {
             const registro = {
-                IDSOCIEDAD: Number(sociedad),
-                IDCEDI: Number(cedis),
+                IDSOCIEDAD: sociedad,
+                IDCEDI: cedis,
                 IDETIQUETA: etiqueta,
                 IDVALOR: valor,
                 INFOAD: infoAdicional,
