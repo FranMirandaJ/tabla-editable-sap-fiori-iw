@@ -25,12 +25,14 @@ import {
   TableHeaderCell,
   TableRow,
   TableCell,
-  Toast
+  Toast,
+  IllustratedMessage 
 } from "@ui5/webcomponents-react";
 import ModalCrear from "../components/ModalCrear";
 import ButtonDesign from "@ui5/webcomponents/dist/types/ButtonDesign.js";
 import ModalEditGrupoET from "../components/ModalEditGrupoET.jsx";
-// Importacion de iconos
+import ModalFiltrosAvanzados from "../components/ModalFiltrosAvanzados.jsx";
+// Importacion de iconos e imagenes
 import "@ui5/webcomponents-icons/dist/menu.js";
 import "@ui5/webcomponents-icons/dist/home.js";
 import "@ui5/webcomponents-icons/dist/settings.js";
@@ -44,7 +46,8 @@ import "@ui5/webcomponents-icons/dist/navigation-up-arrow.js";
 import "@ui5/webcomponents-icons/dist/filter.js";
 import "@ui5/webcomponents-icons/dist/accept.js";
 import "@ui5/webcomponents-icons/dist/decline.js";
-import ModalFiltrosAvanzados from "../components/ModalFiltrosAvanzados.jsx";
+//import "@ui5/webcomponents-fiori/dist/illustrations/NoData.js";
+import "@ui5/webcomponents-fiori/dist/illustrations/AddingColumns.js";
 
 const URL_BASE = "https://app-restful-sap-cds.onrender.com"; // http://localhost:4004
 const URL_BASE_BACKEND_MIGUEL = "http://localhost:3034";
@@ -961,17 +964,7 @@ export default function App() {
             //   if (r) setClickedRow(r);
             // }}
             overflowMode="Scroll"
-            noData={
-              <div style={{ padding: "2rem", textAlign: "center" }}>
-                <Icon name="search" style={{ fontSize: "3rem", marginBottom: "1rem" }} />
-                <div style={{ fontSize: "1.1rem", color: "#6a6a6a" }}>
-                  No se encontraron registros
-                </div>
-                <div style={{ fontSize: "0.9rem", color: "#8a8a8a", marginTop: "0.5rem" }}>
-                  {filters.search ? `Para la búsqueda: "${filters.search}"` : "Intenta ajustar los filtros"}
-                </div>
-              </div>
-            }
+            noData={<IllustratedMessage name="AddingColumns"/>}
           >
             {filteredData.map((row) => {
               const isExpanded = isSameRow(expandedRowId, row);
@@ -1062,7 +1055,7 @@ export default function App() {
                     <TableCell><span>{row.valor}</span></TableCell>
                     <TableCell><span>{row.idgroup}</span></TableCell>
                     <TableCell><span>{row.idg}</span></TableCell>
-                    <TableCell><span>{row.info}</span></TableCell>
+                    <TableCell><span>{row.info || "-"}</span></TableCell>
                     <TableCell><span>{row.registro}</span></TableCell>
                     <TableCell><span>{row.ultMod}</span></TableCell>
                     <TableCell>
