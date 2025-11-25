@@ -7,9 +7,7 @@ import {
     Label,
     ComboBox,
     ComboBoxItem,
-    TextArea,
     FlexBox,
-    Icon,
 } from "@ui5/webcomponents-react";
 
 const ModalEditGrupoET = ({ isModalOpen, handleCloseModal, setGrupoET, etiquetas, valores, sociedadSeleccionada, cediSeleccionado }) => {
@@ -20,6 +18,13 @@ const ModalEditGrupoET = ({ isModalOpen, handleCloseModal, setGrupoET, etiquetas
     const [filteredEtiquetas, setFilteredEtiquetas] = useState([]);
     const [filteredValores, setFilteredValores] = useState([]);
 
+    // Función para obtener el texto a mostrar basado en el key
+    const getDisplayText = (catalog, key) => {
+        if (!key) return "";
+        const item = catalog.find(item => item.key?.toString() === key?.toString());
+        return item?.text || key;
+    };
+
     const limpiarEstado = () => {
         setEtiqueta("");
         setValor("");
@@ -29,21 +34,23 @@ const ModalEditGrupoET = ({ isModalOpen, handleCloseModal, setGrupoET, etiquetas
 
     useEffect(() => {
         if (isModalOpen && sociedadSeleccionada && cediSeleccionado) {
+            // Filtrar etiquetas por sociedad y cedi seleccionados
             const etiquetasFiltradas = etiquetas.filter(et =>
-                et.IDSOCIEDAD?.toString() === sociedadSeleccionada.toString() &&
-                et.IDCEDI?.toString() === cediSeleccionado.toString()
+                et.IDSOCIEDAD?.toString() === sociedadSeleccionada?.toString() &&
+                et.IDCEDI?.toString() === cediSeleccionado?.toString()
             );
             setFilteredEtiquetas(etiquetasFiltradas);
         } else {
-            // Si el modal no está abierto o faltan datos, limpiar
             limpiarEstado();
         }
     }, [isModalOpen, sociedadSeleccionada, cediSeleccionado, etiquetas]);
 
     const handleAceptar = () => {
         if (etiqueta && valor) {
-            setGrupoET(`${etiqueta}-${valor}`);
-            handleCloseModal(); // Cierra el modal
+            // Construir Grupo ET con los IDs: "IDETIQUETA-IDVALOR"
+            const grupoET = `${etiqueta}-${valor}`;
+            setGrupoET(grupoET);
+            handleCloseModal();
         } else {
             alert("Por favor, selecciona una etiqueta y un valor.");
         }
@@ -58,11 +65,11 @@ const ModalEditGrupoET = ({ isModalOpen, handleCloseModal, setGrupoET, etiquetas
         <Dialog
             stretch={false}
             open={isModalOpen}
-            onAfterClose={handleCerrar} // Limpia el estado al cerrar
+            onAfterClose={handleCerrar}
             headerText="Definir Grupo ET"
             style={{
-                width: "450px",  // o el ancho que prefieras
-                maxWidth: "90vw" // mantiene responsive
+                width: "450px",
+                maxWidth: "90vw"
             }}
             footer={
                 <Bar
@@ -72,6 +79,7 @@ const ModalEditGrupoET = ({ isModalOpen, handleCloseModal, setGrupoET, etiquetas
                                 design="Emphasized"
                                 onClick={handleAceptar}
                                 className="btn-guardar-modal"
+                                disabled={!etiqueta || !valor}
                             >
                                 Aceptar
                             </Button>
@@ -84,69 +92,85 @@ const ModalEditGrupoET = ({ isModalOpen, handleCloseModal, setGrupoET, etiquetas
             }
             className="modal-sku"
         >
-            <div className="modal-content">
+            <div className="modal-content" style={{ padding: "1rem" }}>
                 <FlexBox
                     direction="Column"
-                    justifyContent="Center"
-                    alignItems="Center"
-                    wrap="Nowrap"
-                    className="modal-form-fields"
                     style={{ gap: '1rem', width: '100%' }}
                 >
-                    <div className="form-field">
-                        <Label required>Grupo ET - Etiqueta</Label>
+
+                    {/* Etiqueta */}
+                    <div>
+                        <Label required>Etiqueta:</Label>
                         <ComboBox
-                            className="modal-combobox"
-                            value={etiqueta}
+                            value={getDisplayText(filteredEtiquetas, etiqueta)}
                             onSelectionChange={(e) => {
                                 const selectedItem = e.detail.item;
                                 const selectedKey = selectedItem?.dataset.key;
-                                setEtiqueta(selectedKey);
-                                // Limpiar valor y filtrar
+                                setEtiqueta(selectedKey || "");
+                                // Limpiar valor y filtrar valores para la etiqueta seleccionada
                                 setValor("");
-                                const valoresFiltrados = valores.filter(v => v.parentEtiqueta === selectedKey);
+                                const valoresFiltrados = valores.filter(v => 
+                                    v.parentEtiqueta === selectedKey
+                                );
                                 setFilteredValores(valoresFiltrados);
                             }}
-                            placeholder="Selecciona una etiqueta"
+                            placeholder={
+                                filteredEtiquetas.length === 0 ? 
+                                "No hay etiquetas disponibles para esta Sociedad/CEDI" : 
+                                "Selecciona una etiqueta"
+                            }
                             filter="Contains"
-                            style={{ width: '400px' }}
+                            style={{ width: '100%' }}
+                            disabled={!sociedadSeleccionada || !cediSeleccionado}
                         >
                             {filteredEtiquetas.map(item =>
-                                <ComboBoxItem key={item.key} data-key={item.key} text={item.text} />
+                                <ComboBoxItem 
+                                    key={item.key} 
+                                    data-key={item.key} 
+                                    text={item.text} 
+                                />
                             )}
                         </ComboBox>
                     </div>
-                    <div className="form-field">
-                        <Label required>Grupo ET - Valor</Label>
+
+                    {/* Valor */}
+                    <div>
+                        <Label required>Valor:</Label>
                         <ComboBox
-                            disabled={!etiqueta}
-                            className="modal-combobox"
-                            value={valor}
+                            value={getDisplayText(filteredValores, valor)}
+                            disabled={!etiqueta || filteredValores.length === 0}
                             onSelectionChange={(e) => {
                                 const selectedItem = e.detail.item;
                                 const selectedKey = selectedItem?.dataset.key;
-                                setValor(selectedKey);
+                                setValor(selectedKey || "");
                             }}
-                            placeholder="Selecciona un valor"
+                            placeholder={
+                                !etiqueta ? "Selecciona una etiqueta primero" :
+                                filteredValores.length === 0 ? "No hay valores disponibles para esta etiqueta" : 
+                                "Selecciona un valor"
+                            }
                             filter="Contains"
-                            style={{ width: '400px' }}
+                            style={{ width: '100%' }}
                         >
                             {filteredValores.map(item =>
-                                <ComboBoxItem key={item.key} data-key={item.key} text={item.text} />
+                                <ComboBoxItem 
+                                    key={item.key} 
+                                    data-key={item.key} 
+                                    text={item.text || item.key} 
+                                />
                             )}
                         </ComboBox>
                     </div>
-                    <div className="modal-field">
-                        <Label>Resultado (Etiqueta-Valor)</Label>
-                        <div className="grupo-et-container">
-                            <Input
-                                value={etiqueta && valor ? `${etiqueta}-${valor}` : ""}
-                                icon={null}
-                                type="Text"
-                                valueState="None"
-                                disabled
-                            />
-                        </div>
+
+                    {/* Vista previa del Grupo ET */}
+                    <div>
+                        <Label>Vista previa del Grupo ET:</Label>
+                        <Input
+                            value={etiqueta && valor ? `${etiqueta}-${valor}` : ""}
+                            placeholder="Se mostrará el Grupo ET aquí"
+                            readOnly
+                            style={{ width: '100%', fontWeight: "bold" }}
+                        />
                     </div>
                 </FlexBox>
             </div>

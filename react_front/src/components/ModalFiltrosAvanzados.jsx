@@ -179,7 +179,7 @@ const ModalFiltrosAvanzados = ({
                     <Label>Sociedad:</Label>
                     <Input
                         value={localFilters.sociedad}
-                        placeholder="100"
+                        placeholder="Sociedad A"
                         style={{ width: "100%" }}
                         onInput={(e) => handleInputChange("sociedad", e.target.value)}
                     />
@@ -190,7 +190,7 @@ const ModalFiltrosAvanzados = ({
                     <Label>CEDI:</Label>
                     <Input
                         value={localFilters.cedis}
-                        placeholder="Ej. 145"
+                        placeholder="Cedis B"
                         style={{ width: "100%" }}
                         onInput={(e) => handleInputChange("cedis", e.target.value)}
                     />
@@ -201,7 +201,7 @@ const ModalFiltrosAvanzados = ({
                     <Label>Etiqueta:</Label>
                     <Input
                         value={localFilters.etiqueta}
-                        placeholder="Ej. IDETIQUETA"
+                        placeholder="Etiqueta C"
                         style={{ width: "100%" }}
                         onInput={(e) => handleInputChange("etiqueta", e.target.value)}
                     />
@@ -212,7 +212,7 @@ const ModalFiltrosAvanzados = ({
                     <Label>Valor:</Label>
                     <Input
                         value={localFilters.valor}
-                        placeholder="Ej. IDVALOR"
+                        placeholder="Valor D"
                         style={{ width: "100%" }}
                         onInput={(e) => handleInputChange("valor", e.target.value)}
                     />

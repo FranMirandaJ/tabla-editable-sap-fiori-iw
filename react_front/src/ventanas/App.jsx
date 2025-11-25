@@ -26,7 +26,7 @@ import {
   TableRow,
   TableCell,
   Toast,
-  IllustratedMessage 
+  IllustratedMessage
 } from "@ui5/webcomponents-react";
 import ModalCrear from "../components/ModalCrear";
 import ButtonDesign from "@ui5/webcomponents/dist/types/ButtonDesign.js";
@@ -117,10 +117,10 @@ export default function App() {
       if (filters.search) {
         const searchLower = filters.search.toLowerCase();
         const matchesSearch =
-          row.sociedad?.toString().toLowerCase().includes(searchLower) ||
-          row.sucursal?.toString().toLowerCase().includes(searchLower) ||
-          row.etiqueta?.toString().toLowerCase().includes(searchLower) ||
-          row.valor?.toString().toLowerCase().includes(searchLower) ||
+          row.textSociedad?.toString().toLowerCase().includes(searchLower) ||
+          row.textSucursal?.toString().toLowerCase().includes(searchLower) ||
+          row.textEtiqueta?.toString().toLowerCase().includes(searchLower) ||
+          row.textValor?.toString().toLowerCase().includes(searchLower) ||
           row.idgroup?.toString().toLowerCase().includes(searchLower) ||
           row.idg?.toString().toLowerCase().includes(searchLower) ||
           row.info?.toString().toLowerCase().includes(searchLower);
@@ -163,12 +163,14 @@ export default function App() {
         if (filters.fechaInicio) {
           const startDate = new Date(filters.fechaInicio);
           startDate.setHours(0, 0, 0, 0); // Establecer a inicio del día
+          //console.log(registroDate+"  "+startDate);
           if (registroDate < startDate) return false;
         }
 
         if (filters.fechaFin) {
           const endDate = new Date(filters.fechaFin);
           endDate.setHours(23, 59, 59, 999); // Establecer a fin del día
+          //console.log(registroDate+"  "+endDate); 
           if (registroDate > endDate) return false;
         }
       }
@@ -204,6 +206,9 @@ export default function App() {
     }, 3000);
   };
 
+
+
+
   const fetchData = async () => {
     setLoading(true);
     try {
@@ -211,19 +216,29 @@ export default function App() {
         `${URL_BASE}/api/security/gruposet/crud?ProcessType=GetAll&DBServer=${dbConnection}`, {}
       );
 
-      //console.log("SERVER RESPONSE ==============> ",res.data?.data?.[0]?.dataRes);
+      //console.log("SERVER RESPONSE ==============> ", res.data?.data?.[0]?.dataRes);
 
       const records =
         res.data?.data?.[0]?.dataRes?.map((item) => ({
+          // SOCIEDAD================
           sociedad: item.IDSOCIEDAD,
+          // CEDIS================
           sucursal: item.IDCEDI,
+          // ETIQUETA================
           etiqueta: item.IDETIQUETA,
+          // VALOR===================
           valor: item.IDVALOR,
+          // ID GRUPO ET=============
           idgroup: item.IDGRUPOET,
+          // ID======================
           idg: item.ID,
+          // INFO ADICIONAL==========
           info: item.INFOAD,
+          // DATOS DE REGISTRO=======
           registro: `${item.FECHAREG} ${item.HORAREG} (${item.USUARIOREG})`,
+          // DATOS DE UPDATE=========
           ultMod: !item.FECHAULTMOD ? "Sin modificaciones" : `${item.FECHAULTMOD} ${item.HORAULTMOD} (${item.USUARIOMOD})`,
+          // ESTATUS=================
           estado: item.ACTIVO
         })) || [];
 
@@ -271,9 +286,13 @@ export default function App() {
         const etiquetas = [];
         const valores = [];
 
+        //console.log(registros);
+
         registros.forEach((item) => {
           // SOCIEDADES
-          if (item.IDSOCIEDAD && !sociedades.some((s) => s.key === item.IDSOCIEDAD)) {
+          if (item.IDSOCIEDAD && !sociedades.some((s) => s.key === item.IDSOCIEDAD) &&
+            item.parentEtiqueta !== "SOCIEDAD" &&
+            item.parentEtiqueta !== "CEDI") {
             sociedades.push({
               key: item.IDSOCIEDAD,
               text: `Sociedad ${item.IDSOCIEDAD}`,
@@ -284,7 +303,9 @@ export default function App() {
           if (
             item.IDSOCIEDAD &&
             item.IDCEDI &&
-            !cedis.some((c) => c.key === item.IDCEDI && c.parentSoc === item.IDSOCIEDAD)
+            !cedis.some((c) => c.key === item.IDCEDI && c.parentSoc === item.IDSOCIEDAD) &&
+            item.parentEtiqueta !== "CEDI" &&
+            item.parentEtiqueta !== "SOCIEDAD"
           ) {
             cedis.push({
               key: item.IDCEDI,
@@ -293,13 +314,14 @@ export default function App() {
             });
           }
 
-          // ETIQUETAS
-          // Guardar etiqueta COMPLETA en etiquetasAll
-          // ETIQUETAS (IDS reales + conservar COLECCION/SECCION para filtros)
-          if (item.IDETIQUETA && item.IDSOCIEDAD && item.IDCEDI && !etiquetas.some((e) => e.key === item.IDETIQUETA)) {
+          // ETIQUETAS - Solo agregar si ETIQUETA está definida
+          if (item.IDETIQUETA && item.IDSOCIEDAD && item.IDCEDI &&
+            !etiquetas.some((e) => e.key === item.IDETIQUETA) &&
+            item.ETIQUETA !== undefined && item.ETIQUETA !== null &&
+            item.IDETIQUETA !== "SOCIEDAD") {
             etiquetas.push({
               key: item.IDETIQUETA,
-              text: item.IDETIQUETA,
+              text: item.ETIQUETA, // Ahora text está definido
               IDETIQUETA: item.IDETIQUETA,
               ETIQUETA: item.ETIQUETA,
               IDSOCIEDAD: item.IDSOCIEDAD,
@@ -310,33 +332,50 @@ export default function App() {
             });
           }
 
-          const etiquetasSimplificadas = etiquetas.map(e => ({
-            key: e.IDETIQUETA,
-            text: e.ETIQUETA || e.IDETIQUETA,
-            IDSOCIEDAD: e.IDSOCIEDAD,
-            IDCEDI: e.IDCEDI
-          }));
+          //console.log(item.valores);
 
           // VALORES anidados
-          if (Array.isArray(item.valores)) {
+          // if (Array.isArray(item.valores)) {
+          //   item.valores.forEach((v) => {
+          //     valores.push({
+          //       key: v.IDVALOR,     // ID REAL
+          //       text: v.IDVALOR,
+          //       IDVALOR: v.IDVALOR,
+          //       VALOR: v.VALOR,
+          //       IDSOCIEDAD: v.IDSOCIEDAD,
+          //       IDCEDI: v.IDCEDI,
+          //       parentEtiqueta: item.IDETIQUETA
+          //     });
+          //   });
+          // }
+          if (item.valores && Array.isArray(item.valores) && item.valores.length > 0) {
             item.valores.forEach((v) => {
-              valores.push({
-                key: v.IDVALOR,     // ID REAL
-                text: v.IDVALOR,
-                IDVALOR: v.IDVALOR,
-                VALOR: v.VALOR,
-                IDSOCIEDAD: v.IDSOCIEDAD,
-                IDCEDI: v.IDCEDI,
-                parentEtiqueta: item.IDETIQUETA
-              });
+              if (v.IDETIQUETA !== "CEDI" && v.IDETIQUETA !== "SOCIEDAD") {
+                valores.push({
+                  key: v.IDVALOR,     // ID REAL
+                  text: v.VALOR,
+                  VALOR: v.VALOR,
+                  IDVALOR: v.IDVALOR,
+                  IDSOCIEDAD: v.IDSOCIEDAD,
+                  IDCEDI: v.IDCEDI,
+                  parentEtiqueta: item.IDETIQUETA,
+                });
+              }
             });
           }
+
+
         });
 
         setCedisCatalog(cedis);
         setEtiquetasCatalog(etiquetas);
         setValoresCatalog(valores);
         setSociedadesCatalog(sociedades);
+
+        // console.log("sociedad", sociedades);
+        // console.log("valores", valores);
+        // console.log("etiqeutas", etiquetas);
+        // console.log("cedis", cedis);
 
       } catch (error) {
         console.error('Error fetching data:', error);
@@ -590,8 +629,7 @@ export default function App() {
       fetchData();
 
     } catch (err) {
-      console.error("Error al eliminar:", err);
-      const numSelectedRows = selectedRowsArray.length;
+      console.error("❌Error al eliminar:", err);
       showToastMessage("❌ Error al eliminar los registros");
     } finally {
       setLoading(false);
@@ -959,15 +997,17 @@ export default function App() {
                 ))}
               </TableHeaderRow>
             }
-            // onRowClick={(ev) => {
-            //   const r = ev?.row?.original ?? ev?.detail?.row?.original ?? null;
-            //   if (r) setClickedRow(r);
-            // }}
             overflowMode="Scroll"
-            noData={<IllustratedMessage name="AddingColumns"/>}
+            noData={<IllustratedMessage name="AddingColumns" />}
           >
+
+{/* ================================ MAPEO DE FILAS DE LA TABLA ======================================= */}
             {filteredData.map((row) => {
               const isExpanded = isSameRow(expandedRowId, row);
+              row.textEtiqueta = etiquetasCatalog.find(e => e.key === row.etiqueta)?.text;
+              row.textValor = valoresCatalog.find(v => v.key === row.valor)?.text;
+              row.textSociedad = sociedadesCatalog.find(s => s.key === row.sociedad)?.text;
+              row.textSucursal = cedisCatalog.find(c => c.key === row.sucursal)?.text;
               return (
                 <React.Fragment key={`${row.sociedad}|${row.sucursal}|${row.etiqueta}|${row.valor}|${row.idgroup}|${row.idg}`}>
                   <TableRow
@@ -1009,7 +1049,6 @@ export default function App() {
                               registro: row.registro,
                               ultMod: row.ultMod
                             };
-
                             setSelectedRowsArray((prev) => {
                               if (isChecked) {
                                 return [...prev, rowKey];
@@ -1049,10 +1088,10 @@ export default function App() {
                         }}
                       />
                     </TableCell>
-                    <TableCell><span>{row.sociedad}</span></TableCell>
-                    <TableCell><span>{row.sucursal}</span></TableCell>
-                    <TableCell><span>{row.etiqueta}</span></TableCell>
-                    <TableCell><span>{row.valor}</span></TableCell>
+                    <TableCell><span>{row.textSociedad || row.sociedad}</span></TableCell>
+                    <TableCell><span>{row.textSucursal || row.sucursal}</span></TableCell>
+                    <TableCell><span>{row.textEtiqueta || row.etiqueta}</span></TableCell>
+                    <TableCell><span>{row.textValor || row.valor}</span></TableCell>
                     <TableCell><span>{row.idgroup}</span></TableCell>
                     <TableCell><span>{row.idg}</span></TableCell>
                     <TableCell><span>{row.info || "-"}</span></TableCell>
@@ -1067,10 +1106,17 @@ export default function App() {
                       />
                     </TableCell>
                   </TableRow>
+
+{/* ================================ FILA EXPANDIBLE DE EDICIÓN EN LINEA ======================================= */}
                   {isExpanded && (
                     <TableRow className="expanded-row">
+                      {/* ====== Celda para checkbox de seleccion ====== */}
                       <TableCell />
+
+                      {/* ====== Celda para el btn de expandir fila (inline edit) ====== */}
                       <TableCell />
+
+                      {/* ====== Sociedad ====== */}
                       <TableCell>
                         <ComboBox
                           className="modal-combobox"
@@ -1104,6 +1150,8 @@ export default function App() {
                           )}
                         </ComboBox>
                       </TableCell>
+
+                       {/* ====== Sucursal - CEDIS  ====== */}
                       <TableCell>
                         <ComboBox
                           className="modal-combobox"
@@ -1135,10 +1183,12 @@ export default function App() {
                           )}
                         </ComboBox>
                       </TableCell>
+
+                       {/* ====== Etiqueta ====== */}
                       <TableCell>
                         <ComboBox
                           className="modal-combobox"
-                          value={editingRowData.etiqueta}
+                          value={etiquetasCatalog.find(et => et.key === editingRowData.etiqueta)?.text || editingRowData.etiqueta}
                           disabled={!editingRowData.sucursal || loading}
                           onSelectionChange={(e) => {
                             const selectedItem = e.detail.item;
@@ -1164,10 +1214,12 @@ export default function App() {
                           )}
                         </ComboBox>
                       </TableCell>
+
+                       {/* ====== Valor ====== */}
                       <TableCell>
                         <ComboBox
                           className="modal-combobox"
-                          value={editingRowData.valor}
+                          value={valoresCatalog.find(v => v.key === editingRowData.valor).text || editingRowData.valor}
                           disabled={!editingRowData.etiqueta || loading}
                           onSelectionChange={(e) => {
                             const selectedItem = e.detail.item;
@@ -1183,6 +1235,8 @@ export default function App() {
                           )}
                         </ComboBox>
                       </TableCell>
+
+                       {/* ====== Grupo ET ====== */}
                       <TableCell>
                         <FlexBox direction="Column" style={{ gap: '0.5rem' }}>
                           <Input name="idgroup" value={editingRowData?.idgroup || ''} disabled style={{ width: '100%' }} />
@@ -1196,20 +1250,30 @@ export default function App() {
                           />
                         </FlexBox>
                       </TableCell>
+
+                      {/* ====== ID ====== */}
                       <TableCell>
                         <Input name="idg" value={editingRowData?.idg || ''} onInput={handleEditInputChange} disabled={loading} />
                       </TableCell>
+
+                      {/* ====== Info adicional ====== */}
                       <TableCell>
                         <Input name="info" value={editingRowData?.info || ''} onInput={handleEditInputChange} disabled={loading} />
                       </TableCell>
+
+                      {/* ====== Datos del registro ====== */}
                       <TableCell>
                         {/* El registro generalmente no es editable */}
                         <span>{row.registro}</span>
                       </TableCell>
+
+                      {/* ====== Datos de ult. modificacion ====== */}
                       <TableCell>
                         {/* La última modificación no es editable */}
                         <span>{row.ultMod}</span>
                       </TableCell>
+
+                      {/* ====== Celdas con botones de accion ====== */}
                       <TableCell>
                         <FlexBox direction="Column" style={{ gap: '0.5rem' }}>
                           <Button
@@ -1237,11 +1301,14 @@ export default function App() {
                           </Button>
                         </FlexBox>
                       </TableCell>
+
                     </TableRow>
                   )}
+{/* ================================ FIN FILA EXPANDIBLE DE EDICIÓN EN LINEA ======================================= */}
                 </React.Fragment>
               );
             })}
+{/* ================================ FIN DE MAPEO DE FILAS DE LA TABLA ======================================= */}
           </Table>
 
         </div>
@@ -1276,9 +1343,6 @@ export default function App() {
         sociedadSeleccionada={editingRowData?.sociedad}
         cediSeleccionado={editingRowData?.sucursal}
       />
-
-
-
 
       {/* 🔹 Ventana de configuración para cambiar server de BD */}
       {showConfig && (
