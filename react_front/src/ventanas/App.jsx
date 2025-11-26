@@ -892,6 +892,14 @@ export default function App() {
               Crear
             </Button>
             <Button
+              className="btn-editar"
+              icon="edit"
+              onClick={() => {}}
+              disabled={selectedRowsArray.length !== 1|| loading}
+            >
+              Editar
+            </Button>
+            <Button
               className="btn-eliminar"
               icon="delete"
               design={ButtonDesign.Negative}
