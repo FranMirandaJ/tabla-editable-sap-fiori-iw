@@ -32,6 +32,7 @@ import ModalCrear from "../components/ModalCrear";
 import ButtonDesign from "@ui5/webcomponents/dist/types/ButtonDesign.js";
 import ModalEditGrupoET from "../components/ModalEditGrupoET.jsx";
 import ModalFiltrosAvanzados from "../components/ModalFiltrosAvanzados.jsx";
+import ModalEditar from "../components/ModalEditar.jsx";
 // Importacion de iconos e imagenes
 import "@ui5/webcomponents-icons/dist/menu.js";
 import "@ui5/webcomponents-icons/dist/home.js";
@@ -80,6 +81,10 @@ export default function App() {
   const [filteredCedisCatalog, setFilteredCedisCatalog] = useState([]);
   const [filteredEtiquetasCatalog, setFilteredEtiquetasCatalog] = useState([]);
   const [filteredValoresCatalog, setFilteredValoresCatalog] = useState([]);
+
+  // Edicion en modal
+  const [isModalEditOpen, setIsModalEditOpen] = useState(false);
+  const [registroAEditar, setRegistroAEditar] = useState(null);
 
   // Para mensajes en el toast
   const [toastMessage, setToastMessage] = useState("");
@@ -288,7 +293,7 @@ export default function App() {
 
         //console.log("RESPUESTA DEL BACKEND DE MIGUEL: ", registros);
 
-        registros.forEach((item) => {          
+        registros.forEach((item) => {
           // OBTENER CATALOGO DE SOCIEDADES
           if (item.ETIQUETA === "Sociedades Corporativas" && item.IDETIQUETA === "SOCIEDAD") {
             item.valores.forEach(v => {
@@ -315,8 +320,8 @@ export default function App() {
             !etiquetas.some((e) => e.key === item.IDETIQUETA) &&
             item.ETIQUETA !== undefined && item.ETIQUETA !== null &&
             item.IDETIQUETA !== "SOCIEDAD" && item.IDETIQUETA !== "CEDI") {
-              console.log(item);
-              
+            console.log(item);
+
             etiquetas.push({
               key: item.IDETIQUETA, // ID QUE SE GUARDA EN BD
               text: item.ETIQUETA, // LO QUE SE MUESTRA EN UI
@@ -894,8 +899,13 @@ export default function App() {
             <Button
               className="btn-editar"
               icon="edit"
-              onClick={() => {}}
-              disabled={selectedRowsArray.length !== 1|| loading}
+              onClick={() => {
+                if (selectedRowsArray.length === 1) {
+                  setRegistroAEditar(selectedRowsArray[0]);
+                  setIsModalEditOpen(true);
+                }
+              }}
+              disabled={selectedRowsArray.length !== 1 || loading}
             >
               Editar
             </Button>
@@ -1369,6 +1379,25 @@ export default function App() {
         sociedadSeleccionada={editingRowData?.sociedad}
         cediSeleccionado={editingRowData?.sucursal}
       />
+
+      {/* Modal de edicion de registro */}
+      {isModalEditOpen && (
+        <ModalEditar
+          isModalOpen={isModalEditOpen}
+          handleCloseModal={() => {
+            setIsModalEditOpen(false);
+            setRegistroAEditar(null);
+          }}
+          dbConnection={dbConnection}
+          refetchData={fetchData}
+          sociedadesCatalog={sociedadesCatalog}
+          valoresCatalog={valoresCatalog}
+          cedisCatalog={cedisCatalog}
+          etiquetasCatalog={etiquetasCatalog}
+          showToastMessage={showToastMessage}
+          registroEditar={registroAEditar} // Pasar el registro a editar
+        />
+      )}
 
       {/* 🔹 Ventana de configuración para cambiar server de BD */}
       {showConfig && (
