@@ -6,24 +6,21 @@ import {
     Label,
     ComboBox,
     ComboBoxItem,
-    FlexBox,
-    Title,
     CheckBox,
 } from "@ui5/webcomponents-react";
 
 const ModalFiltroET = ({
     isModalOpen,
     handleCloseModal,
+    handleAplicarFiltros,
     etiquetasCatalog,
-    filters,
-    setFilters
+    currentFilters
 }) => {
-    const [fechaSeleccionada, setFechaSeleccionada] = useState("ALL");
+    const [fechaSeleccionada, setFechaSeleccionada] = useState("todos");
     const [coleccionesSeleccionadas, setColeccionesSeleccionadas] = useState([]);
     const [seccionesSeleccionadas, setSeccionesSeleccionadas] = useState([]);
 
     // Extraer colecciones y secciones únicas del catálogo completo de etiquetas
-    // Usamos etiquetasCatalog que viene del padre (que ya está filtrado por Sociedad/CEDI)
     const coleccionesUnicas = [...new Set(etiquetasCatalog
         .map(et => et.COLECCION)
         .filter(col => col && col.trim() !== "")
@@ -34,15 +31,8 @@ const ModalFiltroET = ({
         .filter(sec => sec && sec.trim() !== "")
     )].sort();
 
-    const updateFilter = (filterName, filterValue) => {
-        setFilters(prev => ({
-            ...prev,
-            [filterName]: filterValue
-        }));
-    };
-
     const opcionesFecha = [
-        { key: "ALL", text: "Todos" },
+        { key: "todos", text: "Todos" },
         { key: "1M", text: "Último mes" },
         { key: "3M", text: "Últimos 3 meses" },
         { key: "6M", text: "Últimos 6 meses" },
@@ -65,7 +55,7 @@ const ModalFiltroET = ({
         );
     };
 
-    // Función para manejar el cambio del checkbox sin conflicto
+    // Función para manejar el cambio del checkbox
     const handleCheckboxChange = (type, value) => {
         if (type === 'coleccion') {
             toggleColeccion(value);
@@ -73,12 +63,31 @@ const ModalFiltroET = ({
             toggleSeccion(value);
         }
     };
-    
+
+    // Función para aplicar los filtros
+    const aplicarFiltros = () => {
+        const nuevosFiltros = {
+            ultFechaMod: fechaSeleccionada,
+            coleccion: coleccionesSeleccionadas,
+            seccion: seccionesSeleccionadas,
+        };
+        handleAplicarFiltros(nuevosFiltros);
+    };
+
+    // Efecto para inicializar con los filtros actuales cuando se abre el modal
+    useEffect(() => {
+        if (isModalOpen) {
+            setFechaSeleccionada(currentFilters.ultFechaMod || "todos");
+            setColeccionesSeleccionadas(currentFilters.coleccion || []);
+            setSeccionesSeleccionadas(currentFilters.seccion || []);
+        }
+    }, [isModalOpen, currentFilters]);
+
     return (
         <Dialog
             stretch={false}
             open={isModalOpen}
-            onAfterClose={() => handleCloseModal()}
+            onAfterClose={handleCloseModal}
             headerText="Filtrar Etiquetas"
             style={{
                 width: "450px",
@@ -96,7 +105,7 @@ const ModalFiltroET = ({
                             </Button>
                             <Button
                                 design="Transparent"
-                                onClick={() => handleCloseModal()}
+                                onClick={handleCloseModal}
                             >
                                 Cancelar
                             </Button>
@@ -122,7 +131,7 @@ const ModalFiltroET = ({
                         onSelectionChange={(e) => {
                             const selectedItem = e.detail.item;
                             const selectedKey = selectedItem?.dataset.key;
-                            setFechaSeleccionada(selectedKey || "ALL");
+                            setFechaSeleccionada(selectedKey || "todos");
                         }}
                         style={{ width: '100%' }}
                     >
@@ -153,7 +162,7 @@ const ModalFiltroET = ({
                             overflow: "auto",
                             borderRadius: "0.375rem",
                             padding: "0.5rem",
-                            border: "1px solid #d9d9d9"
+                            maxHeight: "200px"
                         }}>
                             {coleccionesUnicas.map(coleccion => (
                                 <div
@@ -162,11 +171,9 @@ const ModalFiltroET = ({
                                         display: "flex",
                                         alignItems: "center",
                                         gap: "0.5rem",
-                                        padding: "0.375rem 0.5rem",
                                         cursor: "pointer",
-                                        borderRadius: "0.25rem",
                                         marginBottom: "0.125rem",
-                                        transition: "background-color 0.2s",
+                                        borderBottom: "1px solid #d9d9d9"
                                     }}
                                     onClick={() => toggleColeccion(coleccion)}
                                 >
@@ -174,7 +181,7 @@ const ModalFiltroET = ({
                                         checked={coleccionesSeleccionadas.includes(coleccion)}
                                         onChange={() => handleCheckboxChange('coleccion', coleccion)}
                                         style={{ margin: 0 }}
-                                        onClick={(e) => e.stopPropagation()} // Prevenir doble trigger
+                                        onClick={(e) => e.stopPropagation()}
                                     />
                                     <span style={{ userSelect: "none" }}>{coleccion}</span>
                                 </div>
@@ -190,9 +197,7 @@ const ModalFiltroET = ({
                         <div style={{
                             flex: 1,
                             overflow: "auto",
-                            borderRadius: "0.375rem",
-                            padding: "0.5rem",
-                            border: "1px solid #d9d9d9"
+                            maxHeight: "200px"
                         }}>
                             {seccionesUnicas.map(seccion => (
                                 <div
@@ -201,11 +206,9 @@ const ModalFiltroET = ({
                                         display: "flex",
                                         alignItems: "center",
                                         gap: "0.5rem",
-                                        padding: "0.375rem 0.5rem",
                                         cursor: "pointer",
-                                        borderRadius: "0.25rem",
                                         marginBottom: "0.125rem",
-                                        transition: "background-color 0.2s",
+                                        borderBottom: "1px solid #d9d9d9",
                                     }}
                                     onClick={() => toggleSeccion(seccion)}
                                 >
@@ -213,7 +216,7 @@ const ModalFiltroET = ({
                                         checked={seccionesSeleccionadas.includes(seccion)}
                                         onChange={() => handleCheckboxChange('seccion', seccion)}
                                         style={{ margin: 0 }}
-                                        onClick={(e) => e.stopPropagation()} // Prevenir doble trigger
+                                        onClick={(e) => e.stopPropagation()}
                                     />
                                     <span style={{ userSelect: "none" }}>{seccion}</span>
                                 </div>

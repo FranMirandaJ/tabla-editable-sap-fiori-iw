@@ -31,13 +31,13 @@ const ModalCrear = ({
 }) => {
 
     const [isLoading, setIsLoading] = useState(false);
-
     const [isModalFiltroETOpen, setIsModalFiltroETOpen] = useState(false);
-    const [isModalEditGrupoETOpen, setIsModalEditGrupoETOpen] = useState(false); // AGREGAR ESTA LÍNEA
+    const [isModalEditGrupoETOpen, setIsModalEditGrupoETOpen] = useState(false);
 
     // Estados para los catálogos filtrados
     const [filteredCedisCatalog, setFilteredCedisCatalog] = useState([]);
     const [filteredEtiquetasCatalog, setFilteredEtiquetasCatalog] = useState([]);
+    const [filteredEtiquetasCatalogOriginal, setFilteredEtiquetasCatalogOriginal] = useState([]);
     const [filteredValoresCatalog, setFilteredValoresCatalog] = useState([]);
 
     // Estados para los campos del formulario
@@ -56,8 +56,76 @@ const ModalCrear = ({
         seccion: [],
     });
 
-    const applyFilters = (data) => {
+    // Función para aplicar filtros a las etiquetas
+    const applyFilters = (etiquetas, filtros) => {
+        if (!etiquetas.length) return etiquetas;
 
+        let filtered = [...etiquetas];
+
+        // Aplicar filtro por fecha
+        if (filtros.ultFechaMod && filtros.ultFechaMod !== "todos") {
+            const now = new Date();
+            let cutoffDate = new Date();
+
+            switch (filtros.ultFechaMod) {
+                case "1M":
+                    cutoffDate.setMonth(now.getMonth() - 1);
+                    break;
+                case "3M":
+                    cutoffDate.setMonth(now.getMonth() - 3);
+                    break;
+                case "6M":
+                    cutoffDate.setMonth(now.getMonth() - 6);
+                    break;
+                case "1Y":
+                    cutoffDate.setFullYear(now.getFullYear() - 1);
+                    break;
+                default:
+                    break;
+            }
+
+            filtered = filtered.filter(etiqueta => {
+                const updatedAt = new Date(etiqueta.updatedAt || etiqueta.createdAt);
+                return updatedAt >= cutoffDate;
+            });
+        }
+
+        // Aplicar filtro por colección
+        if (filtros.coleccion && filtros.coleccion.length > 0) {
+            filtered = filtered.filter(etiqueta => 
+                filtros.coleccion.includes(etiqueta.COLECCION)
+            );
+        }
+
+        // Aplicar filtro por sección
+        if (filtros.seccion && filtros.seccion.length > 0) {
+            filtered = filtered.filter(etiqueta => 
+                filtros.seccion.includes(etiqueta.SECCION)
+            );
+        }
+
+        return filtered;
+    };
+
+    // Efecto para aplicar filtros cuando cambian los filtros o el catálogo original
+    useEffect(() => {
+        if (filteredEtiquetasCatalogOriginal.length > 0) {
+            const etiquetasFiltradas = applyFilters(filteredEtiquetasCatalogOriginal, filters);
+            setFilteredEtiquetasCatalog(etiquetasFiltradas);
+            
+            // Si la etiqueta actualmente seleccionada no está en los resultados filtrados, limpiar la selección
+            if (etiqueta && !etiquetasFiltradas.find(et => et.key === etiqueta)) {
+                setEtiqueta("");
+                setValor("");
+                setFilteredValoresCatalog([]);
+            }
+        }
+    }, [filters, filteredEtiquetasCatalogOriginal]);
+
+    // Función para manejar la aplicación de filtros desde el modal
+    const handleAplicarFiltros = (nuevosFiltros) => {
+        setFilters(nuevosFiltros);
+        setIsModalFiltroETOpen(false);
     };
 
     // Limpiar formulario cuando se cierra el modal
@@ -134,7 +202,14 @@ const ModalCrear = ({
         // Limpiar también los catálogos filtrados
         setFilteredCedisCatalog([]);
         setFilteredEtiquetasCatalog([]);
+        setFilteredEtiquetasCatalogOriginal([]);
         setFilteredValoresCatalog([]);
+        // Resetear filtros
+        setFilters({
+            ultFechaMod: "todos",
+            coleccion: [],
+            seccion: [],
+        });
     };
 
     const handleCancelar = () => {
@@ -196,6 +271,12 @@ const ModalCrear = ({
                                     setEtiqueta("");
                                     setValor("");
                                     setGrupoET("");
+                                    // Resetear filtros
+                                    setFilters({
+                                        ultFechaMod: "todos",
+                                        coleccion: [],
+                                        seccion: [],
+                                    });
                                     // Filtrar CEDIS - asegurar comparación de strings
                                     const filtered = cedisCatalog.filter(c =>
                                         c.parentSoc?.toString() === selectedKey?.toString()
@@ -203,6 +284,7 @@ const ModalCrear = ({
                                     console.log("CEDIS filtrados:", filtered);
                                     setFilteredCedisCatalog(filtered);
                                     setFilteredEtiquetasCatalog([]);
+                                    setFilteredEtiquetasCatalogOriginal([]);
                                     setFilteredValoresCatalog([]);
                                 }}
                                 placeholder="Selecciona una sociedad"
@@ -234,6 +316,12 @@ const ModalCrear = ({
                                     setEtiqueta("");
                                     setValor("");
                                     setGrupoET("");
+                                    // Resetear filtros
+                                    setFilters({
+                                        ultFechaMod: "todos",
+                                        coleccion: [],
+                                        seccion: [],
+                                    });
                                     // Filtrar Etiquetas - asegurar comparación de strings
                                     const filtered = etiquetasCatalog.filter(et =>
                                         et.IDSOCIEDAD?.toString() === sociedad?.toString() &&
@@ -241,6 +329,7 @@ const ModalCrear = ({
                                     );
                                     console.log("Etiquetas filtradas:", filtered);
                                     setFilteredEtiquetasCatalog(filtered);
+                                    setFilteredEtiquetasCatalogOriginal(filtered);
                                     setFilteredValoresCatalog([]);
                                 }}
                                 placeholder={filteredCedisCatalog.length === 0 ? "No hay CEDIS disponibles" : "Selecciona un CEDI"}
@@ -279,7 +368,11 @@ const ModalCrear = ({
                                         console.log("Valores filtrados:", filtered);
                                         setFilteredValoresCatalog(filtered);
                                     }}
-                                    placeholder={filteredEtiquetasCatalog.length === 0 ? "No hay etiquetas disponibles" : "Selecciona una etiqueta"}
+                                    placeholder={
+                                        filteredEtiquetasCatalog.length === 0 
+                                            ? "No hay etiquetas disponibles" 
+                                            : `Etiquetas (${filteredEtiquetasCatalog.length})`
+                                    }
                                     filter="Contains"
                                     style={{ width: '100%' }}
                                 >
@@ -379,13 +472,13 @@ const ModalCrear = ({
                 <ModalFiltroET
                     isModalOpen={isModalFiltroETOpen}
                     handleCloseModal={() => setIsModalFiltroETOpen(false)}
-                    etiquetasCatalog={filteredEtiquetasCatalog}
-                    filters={filters}
-                    setFilters={setFilters}
+                    handleAplicarFiltros={handleAplicarFiltros}
+                    etiquetasCatalog={filteredEtiquetasCatalogOriginal}
+                    currentFilters={filters}
                 />
             )}
 
-            {isModalEditGrupoETOpen && ( // AGREGAR ESTE MODAL
+            {isModalEditGrupoETOpen && (
                 <ModalEditGrupoET
                     isModalOpen={isModalEditGrupoETOpen}
                     handleCloseModal={() => setIsModalEditGrupoETOpen(false)}
