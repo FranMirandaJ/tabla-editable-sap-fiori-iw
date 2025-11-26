@@ -330,7 +330,6 @@ export default function App() {
             !etiquetas.some((e) => e.key === item.IDETIQUETA) &&
             item.ETIQUETA !== undefined && item.ETIQUETA !== null &&
             item.IDETIQUETA !== "SOCIEDAD" && item.IDETIQUETA !== "CEDI") {
-            console.log(item);
 
             etiquetas.push({
               key: item.IDETIQUETA, // ID QUE SE GUARDA EN BD
@@ -371,10 +370,10 @@ export default function App() {
         setValoresCatalog(valores);
         setSociedadesCatalog(sociedades);
 
-        console.log("sociedad", sociedades);
-        console.log("valores", valores);
-        console.log("etiqeutas", etiquetas);
-        console.log("cedis", cedis);
+        // console.log("sociedad", sociedades);
+        // console.log("valores", valores);
+        // console.log("etiqeutas", etiquetas);
+        // console.log("cedis", cedis);
 
       } catch (error) {
         console.error('Error fetching data:', error);
@@ -943,8 +942,42 @@ export default function App() {
       {/* 🔹 ShellBar con menú hamburguesa */}
       <ShellBar
         primaryTitle="Proyecto final"
-        logo={<img alt="SAP Logo" src="https://ui5.github.io/webcomponents/images/sap-logo-svg.svg" />}
-        profile={<Avatar><img alt="person-placeholder" src="https://ui5.github.io/webcomponents-react/v2/assets/Person-B7wHqdJw.png" /></Avatar>}
+        logo={
+          <div style={{
+            display: "flex",
+            alignItems: "center",
+            gap: "12px", 
+            height: "100%", 
+            paddingRight: "10px" 
+          }}>
+            <img
+              alt="React Logo"
+              src="https://upload.wikimedia.org/wikipedia/commons/a/a7/React-icon.svg"
+              style={{
+                height: "33px", 
+                width: "auto",
+                objectFit: "contain" 
+              }}
+            />
+
+            <div style={{ width: "1px", height: "24px", backgroundColor: "#ccc" }}></div>
+
+            <img
+              alt="SAP Logo"
+              src="https://ui5.github.io/webcomponents/images/sap-logo-svg.svg"
+              style={{
+                height: "36px", 
+                width: "auto",
+                objectFit: "contain"
+              }}
+            />
+          </div>
+        }
+        profile={
+          <Avatar>
+            <img alt="person-placeholder" src="https://ui5.github.io/webcomponents-react/v2/assets/Person-B7wHqdJw.png" />
+          </Avatar>
+        }
         startButton={
           <Button
             icon="menu"
@@ -1371,7 +1404,7 @@ export default function App() {
                           </ComboBox>
                           <Button
                             icon="filter"
-                            design="Transparent"
+                            design="Default"
                             onClick={() => setIsModalFiltroETInlineOpen(true)}
                             disabled={!editingRowData?.sociedad || !editingRowData?.sucursal || loading}
                             title="Filtrar etiquetas"
@@ -1414,7 +1447,7 @@ export default function App() {
                           />
                           <Button
                             icon="edit"
-                            design="Transparent"
+                            design="Default"
                             onClick={() => setIsEditGrupoETModalOpen(true)}
                             disabled={!editingRowData?.etiqueta || !editingRowData.valor || loading}
                             title="Editar Grupo ET"
