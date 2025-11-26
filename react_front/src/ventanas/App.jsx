@@ -577,8 +577,6 @@ export default function App() {
   };
 
   const handleDesactivar = async () => {
-    //if (!clickedRow) { alert("Selecciona un registro"); return; }
-
     // de momento solo se puede desactivar uno a la vez.
     if (selectedRowsArray.lenght > 1) return;
     setLoading(true);
