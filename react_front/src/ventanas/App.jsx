@@ -143,33 +143,42 @@ export default function App() {
         if (!matchesSearch) return false;
       }
 
-      // Filtros avanzados
-      if (filters.sociedad && row.sociedad?.toString() !== filters.sociedad) {
-        return false;
+      if (filters.sociedad) {
+        const sociedadText = getDisplayText(sociedadesCatalog, row.sociedad) || row.sociedad;
+        if (!sociedadText.toString().toLowerCase().includes(filters.sociedad.toLowerCase())) {
+          return false;
+        }
       }
 
-      if (filters.cedis && row.sucursal?.toString() !== filters.cedis) {
-        return false;
+      if (filters.cedis) {
+        const cedisText = getDisplayText(cedisCatalog, row.sucursal) || row.sucursal;
+        if (!cedisText.toString().toLowerCase().includes(filters.cedis.toLowerCase())) {
+          return false;
+        }
       }
 
-      if (filters.etiqueta && !row.etiqueta?.toString().toLowerCase().includes(filters.etiqueta.toLowerCase())) {
-        return false;
+      if (filters.etiqueta) {
+        const etiquetaText = getDisplayText(etiquetasCatalog, row.etiqueta) || row.etiqueta;
+        if (!etiquetaText.toString().toLowerCase().includes(filters.etiqueta.toLowerCase())) {
+          return false;
+        }
       }
 
-      if (filters.valor && !row.valor?.toString().toLowerCase().includes(filters.valor.toLowerCase())) {
-        return false;
+      if (filters.valor) {
+        const valorText = getDisplayText(valoresCatalog, row.valor) || row.valor;
+        if (!valorText.toString().toLowerCase().includes(filters.valor.toLowerCase())) {
+          return false;
+        }
       }
 
-      // Filtro por fecha - CORREGIDO
+      // Filtro por fecha - MANTENIDO
       if (filters.fechaInicio || filters.fechaFin) {
-        // Extraer solo la fecha del campo registro (formato: "2025-11-24 05:39:35 (FMIRANDAJ)")
-        const fechaRegistro = row.registro?.split(' ')[0]; // Tomar solo "2025-11-24"
+        const fechaRegistro = row.registro?.split(' ')[0];
 
-        if (!fechaRegistro) return false; // Si no hay fecha, excluir el registro
+        if (!fechaRegistro) return false;
 
         const registroDate = new Date(fechaRegistro);
 
-        // Validar que la fecha sea válida
         if (isNaN(registroDate.getTime())) {
           console.warn('Fecha inválida en registro:', row.registro);
           return false;
@@ -177,15 +186,13 @@ export default function App() {
 
         if (filters.fechaInicio) {
           const startDate = new Date(filters.fechaInicio);
-          startDate.setHours(0, 0, 0, 0); // Establecer a inicio del día
-          //console.log(registroDate+"  "+startDate);
+          startDate.setHours(0, 0, 0, 0);
           if (registroDate < startDate) return false;
         }
 
         if (filters.fechaFin) {
           const endDate = new Date(filters.fechaFin);
-          endDate.setHours(23, 59, 59, 999); // Establecer a fin del día
-          //console.log(registroDate+"  "+endDate); 
+          endDate.setHours(23, 59, 59, 999);
           if (registroDate > endDate) return false;
         }
       }
@@ -946,17 +953,17 @@ export default function App() {
           <div style={{
             display: "flex",
             alignItems: "center",
-            gap: "12px", 
-            height: "100%", 
-            paddingRight: "10px" 
+            gap: "12px",
+            height: "100%",
+            paddingRight: "10px"
           }}>
             <img
               alt="React Logo"
               src="https://upload.wikimedia.org/wikipedia/commons/a/a7/React-icon.svg"
               style={{
-                height: "33px", 
+                height: "33px",
                 width: "auto",
-                objectFit: "contain" 
+                objectFit: "contain"
               }}
             />
 
@@ -966,7 +973,7 @@ export default function App() {
               alt="SAP Logo"
               src="https://ui5.github.io/webcomponents/images/sap-logo-svg.svg"
               style={{
-                height: "36px", 
+                height: "36px",
                 width: "auto",
                 objectFit: "contain"
               }}
