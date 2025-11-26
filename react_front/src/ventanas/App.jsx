@@ -315,6 +315,8 @@ export default function App() {
             !etiquetas.some((e) => e.key === item.IDETIQUETA) &&
             item.ETIQUETA !== undefined && item.ETIQUETA !== null &&
             item.IDETIQUETA !== "SOCIEDAD" && item.IDETIQUETA !== "CEDI") {
+              console.log(item);
+              
             etiquetas.push({
               key: item.IDETIQUETA, // ID QUE SE GUARDA EN BD
               text: item.ETIQUETA, // LO QUE SE MUESTRA EN UI
@@ -322,8 +324,10 @@ export default function App() {
               ETIQUETA: item.ETIQUETA,
               IDSOCIEDAD: item.IDSOCIEDAD, // PARA REALIZAR FILTRADOS
               IDCEDI: item.IDCEDI, // PARA REALIZAR FILTRADOS
-              COLECCION: item.COLECCION || "", // PARA MODAL DE FILTRO CREO
-              SECCION: item.SECCION || "", // PARA MODAL DE FILTRO CREO
+              COLECCION: item.COLECCION || "", // PARA MODAL DE FILTRO 
+              SECCION: item.SECCION || "", // PARA MODAL DE FILTRO 
+              createdAt: item.createdAt || "", // PARA MODAL DE FILTRO 
+              updatedAt: item.updatedAt || "", // PARA MODAL DE FILTRO 
               _raw: item
             });
           }
@@ -1098,10 +1102,10 @@ export default function App() {
                   {/* ================================ FILA EXPANDIBLE DE EDICIÓN EN LINEA ======================================= */}
                   {isExpanded && (
                     <TableRow className="expanded-row">
-                      {/* ====== Celda para checkbox de seleccion ====== */}
+                      {/* ====== Celda vacía de checkbox de seleccion ====== */}
                       <TableCell />
 
-                      {/* ====== Celda para el btn de expandir fila (inline edit) ====== */}
+                      {/* ====== Celda vacía de btn de expandir fila (inline edit) ====== */}
                       <TableCell />
 
                       {/* ====== Sociedad ====== */}
@@ -1147,7 +1151,7 @@ export default function App() {
                         <ComboBox
                           className="modal-combobox"
                           value={getDisplayText(filteredCedisCatalog, editingRowData.sucursal)}
-                          disabled={!editingRowData.sociedad || filteredCedisCatalog.length === 0}
+                          disabled={!editingRowData.sociedad || filteredCedisCatalog.length === 0 || loading}
                           onSelectionChange={(e) => {
                             const selectedItem = e.detail.item;
                             const selectedKey = selectedItem?.dataset.key;
@@ -1184,7 +1188,7 @@ export default function App() {
                         <ComboBox
                           className="modal-combobox"
                           value={getDisplayText(filteredEtiquetasCatalog, editingRowData.etiqueta)}
-                          disabled={!editingRowData.sucursal || filteredEtiquetasCatalog.length === 0}
+                          disabled={!editingRowData.sucursal || filteredEtiquetasCatalog.length === 0 || loading}
                           onSelectionChange={(e) => {
                             const selectedItem = e.detail.item;
                             const selectedKey = selectedItem?.dataset.key;
@@ -1218,11 +1222,10 @@ export default function App() {
                         <ComboBox
                           className="modal-combobox"
                           value={getDisplayText(filteredValoresCatalog, editingRowData.valor)}
-                          disabled={!editingRowData.etiqueta || filteredValoresCatalog.length === 0}
+                          disabled={!editingRowData.etiqueta || filteredValoresCatalog.length === 0 || loading}
                           onSelectionChange={(e) => {
                             const selectedItem = e.detail.item;
                             const selectedKey = selectedItem?.dataset.key;
-
                             setEditingRowData(prev => ({
                               ...prev,
                               valor: selectedKey || ""

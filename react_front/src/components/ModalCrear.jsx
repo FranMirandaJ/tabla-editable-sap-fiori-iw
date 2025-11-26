@@ -13,6 +13,7 @@ import {
 } from "@ui5/webcomponents-react";
 import ModalEditGrupoET from "./ModalEditGrupoET.jsx";
 import ButtonDesign from "@ui5/webcomponents/dist/types/ButtonDesign.js";
+import ModalFiltroET from "./ModalFiltroET.jsx";
 
 const URL_BASE_BACKEND_CINNALOVERS = "https://app-restful-sap-cds.onrender.com";
 const LOGGED_USER = "FMIRADAJ";
@@ -29,13 +30,10 @@ const ModalCrear = ({
     showToastMessage,
 }) => {
 
-    // console.log("catalogo sociedades ",sociedadesCatalog);
-    // console.log("catalogo cedis ",cedisCatalog);
-    // console.log("catalogo etiquetas ",etiquetasCatalog);
-    // console.log("catalogo valores ",valoresCatalog);
-    
-
     const [isLoading, setIsLoading] = useState(false);
+
+    const [isModalFiltroETOpen, setIsModalFiltroETOpen] = useState(false);
+    const [isModalEditGrupoETOpen, setIsModalEditGrupoETOpen] = useState(false); // AGREGAR ESTA LÍNEA
 
     // Estados para los catálogos filtrados
     const [filteredCedisCatalog, setFilteredCedisCatalog] = useState([]);
@@ -51,7 +49,16 @@ const ModalCrear = ({
     const [id, setId] = useState("");
     const [infoAdicional, setInfoAdicional] = useState("");
 
-    const [isModalEditGrupoETOpen, setIsModalEditGrupoETOpen] = useState(false);
+    // Estado de filtro para las etiquetas
+    const [filters, setFilters] = useState({
+        ultFechaMod: "todos",
+        coleccion: [],
+        seccion: [],
+    });
+
+    const applyFilters = (data) => {
+
+    };
 
     // Limpiar formulario cuando se cierra el modal
     useEffect(() => {
@@ -141,7 +148,7 @@ const ModalCrear = ({
                 stretch={false}
                 open={isModalOpen}
                 onAfterClose={handleCancelar}
-                headerText="Crear Nuevo Registro"
+                headerText="Crear registro"
                 style={{
                     width: "450px",
                     maxWidth: "90vw"
@@ -253,36 +260,45 @@ const ModalCrear = ({
                         {/* Etiqueta */}
                         <div>
                             <Label required>Etiqueta:</Label>
-                            <ComboBox
-                                value={getDisplayText(filteredEtiquetasCatalog, etiqueta)}
-                                disabled={!cedis || filteredEtiquetasCatalog.length === 0}
-                                onSelectionChange={(e) => {
-                                    const selectedItem = e.detail.item;
-                                    const selectedKey = selectedItem?.dataset.key;
-                                    console.log("Etiqueta seleccionada:", selectedKey);
-                                    setEtiqueta(selectedKey || "");
-                                    // Limpiar selección dependiente
-                                    setValor("");
-                                    setGrupoET("");
-                                    // Filtrar Valores
-                                    const filtered = valoresCatalog.filter(v =>
-                                        v.parentEtiqueta === selectedKey
-                                    );
-                                    console.log("Valores filtrados:", filtered);
-                                    setFilteredValoresCatalog(filtered);
-                                }}
-                                placeholder={filteredEtiquetasCatalog.length === 0 ? "No hay etiquetas disponibles" : "Selecciona una etiqueta"}
-                                filter="Contains"
-                                style={{ width: '100%' }}
-                            >
-                                {filteredEtiquetasCatalog.map(item =>
-                                    <ComboBoxItem
-                                        key={item.key}
-                                        data-key={item.key}
-                                        text={item.text}
-                                    />
-                                )}
-                            </ComboBox>
+                            <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
+                                <ComboBox
+                                    value={getDisplayText(filteredEtiquetasCatalog, etiqueta)}
+                                    disabled={!cedis || filteredEtiquetasCatalog.length === 0}
+                                    onSelectionChange={(e) => {
+                                        const selectedItem = e.detail.item;
+                                        const selectedKey = selectedItem?.dataset.key;
+                                        console.log("Etiqueta seleccionada:", selectedKey);
+                                        setEtiqueta(selectedKey || "");
+                                        // Limpiar selección dependiente
+                                        setValor("");
+                                        setGrupoET("");
+                                        // Filtrar Valores
+                                        const filtered = valoresCatalog.filter(v =>
+                                            v.parentEtiqueta === selectedKey
+                                        );
+                                        console.log("Valores filtrados:", filtered);
+                                        setFilteredValoresCatalog(filtered);
+                                    }}
+                                    placeholder={filteredEtiquetasCatalog.length === 0 ? "No hay etiquetas disponibles" : "Selecciona una etiqueta"}
+                                    filter="Contains"
+                                    style={{ width: '100%' }}
+                                >
+                                    {filteredEtiquetasCatalog.map(item =>
+                                        <ComboBoxItem
+                                            key={item.key}
+                                            data-key={item.key}
+                                            text={item.text}
+                                        />
+                                    )}
+                                </ComboBox>
+                                <Button
+                                    icon="filter"
+                                    design="Transparent"
+                                    onClick={() => setIsModalFiltroETOpen(true)}
+                                    disabled={!sociedad || !cedis}
+                                    title="Filtrar etiquetas"
+                                />
+                            </div>
                         </div>
 
                         {/* Valor */}
@@ -320,7 +336,7 @@ const ModalCrear = ({
                                     onChange={(e) => setGrupoET(e.target.value)}
                                     placeholder="Grupo ET"
                                     style={{ flex: 1 }}
-                                    disabled = {true}
+                                    disabled={true}
                                 />
                                 <Button
                                     icon="edit"
@@ -359,17 +375,28 @@ const ModalCrear = ({
                 </div>
             </Dialog>
 
-            {/* Modal para editar Grupo ET */}
-            <ModalEditGrupoET
-                isModalOpen={isModalEditGrupoETOpen}
-                handleCloseModal={() => setIsModalEditGrupoETOpen(false)}
-                setGrupoET={setGrupoET}
-                dbConnection={dbConnection}
-                etiquetas={etiquetasCatalog}
-                valores={valoresCatalog}
-                sociedadSeleccionada={sociedad}
-                cediSeleccionado={cedis}
-            />
+            {isModalFiltroETOpen && (
+                <ModalFiltroET
+                    isModalOpen={isModalFiltroETOpen}
+                    handleCloseModal={() => setIsModalFiltroETOpen(false)}
+                    etiquetasCatalog={filteredEtiquetasCatalog}
+                    filters={filters}
+                    setFilters={setFilters}
+                />
+            )}
+
+            {isModalEditGrupoETOpen && ( // AGREGAR ESTE MODAL
+                <ModalEditGrupoET
+                    isModalOpen={isModalEditGrupoETOpen}
+                    handleCloseModal={() => setIsModalEditGrupoETOpen(false)}
+                    setGrupoET={setGrupoET}
+                    etiquetas={etiquetasCatalog}
+                    valores={valoresCatalog}
+                    sociedadSeleccionada={sociedad}
+                    cediSeleccionado={cedis}
+                />
+            )}
+
         </>
     );
 }
