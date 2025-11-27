@@ -846,43 +846,59 @@ sap.ui.define([
       }
     },
 
-    _preloadInlineCascades: function (oRec) {
-      const oCascade = this.getView().getModel("cascadeModel");
+      _preloadInlineCascades: function (oRec) {
+        const oCascade = this.getView().getModel("cascadeModel");
 
-      const aCedisAll     = oCascade.getProperty("/cedisAll")     || [];
-      const aEtiquetasAll = oCascade.getProperty("/etiquetasAll") || [];
-      const aValoresAll   = oCascade.getProperty("/valoresAll")   || [];
+        const aCedisAll     = oCascade.getProperty("/cedisAll")     || [];
+        const aEtiquetasAll = oCascade.getProperty("/etiquetasAll") || [];
+        const aValoresAll   = oCascade.getProperty("/valoresAll")   || [];
 
-      let aCedis = [];
-      let aEtiquetas = [];
-      let aValores = [];
+        let aCedis     = [];
+        let aEtiquetas = [];
+        let aValores   = [];
 
-      if (oRec.IDSOCIEDAD) {
-        aCedis = aCedisAll.filter(c =>
-          String(c.parentSoc) === String(oRec.IDSOCIEDAD)
-        );
-      }
+        // CEDIS
+        if (oRec.IDSOCIEDAD) {
+            aCedis = aCedisAll.filter(c =>
+                String(c.parentSoc) === String(oRec.IDSOCIEDAD)
+            );
+        }
 
-      if (oRec.IDSOCIEDAD && oRec.IDCEDI) {
-        aEtiquetas = aEtiquetasAll.filter(e =>
-          String(e.IDSOCIEDAD) === String(oRec.IDSOCIEDAD) &&
-          String(e.IDCEDI)     === String(oRec.IDCEDI)
-        );
-      }
+        // ETIQUETAS
+        if (oRec.IDSOCIEDAD && oRec.IDCEDI) {
+            const aEtiquetasFiltradas = aEtiquetasAll.filter(e =>
+                String(e.IDSOCIEDAD) === String(oRec.IDSOCIEDAD) &&
+                String(e.IDCEDI)     === String(oRec.IDCEDI)
+            );
 
-      if (oRec.IDSOCIEDAD && oRec.IDCEDI && oRec.IDETIQUETA) {
-        aValores = aValoresAll.filter(v =>
-          String(v.IDSOCIEDAD)    === String(oRec.IDSOCIEDAD) &&
-          String(v.IDCEDI)        === String(oRec.IDCEDI) &&
-          String(v.parentEtiqueta) === String(oRec.IDETIQUETA)
-        );
-      }
+            // 🔑👀 AQUÍ armamos SIEMPRE key + text
+            aEtiquetas = aEtiquetasFiltradas.map(e => ({
+                // conservas todo lo original
+                ...e,
+                // key que usará el ComboBox (por si lo necesitas)
+                key: e.IDETIQUETA,
+                // texto visible
+                text:
+                    (e.text      && String(e.text).trim())      ||
+                    (e.ALIAS     && String(e.ALIAS).trim())     ||
+                    (e.ETIQUETA  && String(e.ETIQUETA).trim())  ||
+                    e.IDETIQUETA
+            }));
+        }
 
-      oCascade.setProperty("/cedis",     aCedis);
-      oCascade.setProperty("/etiquetas", aEtiquetas);
-      oCascade.setProperty("/valores",   aValores);
-  },
+        // VALORES
+        if (oRec.IDSOCIEDAD && oRec.IDCEDI && oRec.IDETIQUETA) {
+            aValores = aValoresAll.filter(v =>
+                String(v.IDSOCIEDAD)     === String(oRec.IDSOCIEDAD) &&
+                String(v.IDCEDI)         === String(oRec.IDCEDI) &&
+                String(v.parentEtiqueta) === String(oRec.IDETIQUETA)
+            );
+        }
 
+        oCascade.setProperty("/cedis",     aCedis);
+        oCascade.setProperty("/etiquetas", aEtiquetas);  // 👉 ahora traen text
+        oCascade.setProperty("/valores",   aValores);
+    },
     // ========== CASCADAS PARA UPDATE DIALOG ==========
 
     onUpdateSociedadChange: function (oEvent) {
@@ -987,11 +1003,15 @@ sap.ui.define([
       this.onEtiquetaFilterPress();
     },
 
-    // Abre el diálogo de Grupo ET desde el modal de UPDATE
-    onUpdateOpenGrupoEt: function () {
-        const oUpdate = this.getView().getModel("updateModel");
-        const sSoc  = oUpdate.getProperty("/IDSOCIEDAD");
-        const sCedi = oUpdate.getProperty("/IDCEDI");
+   // Abre el diálogo de Grupo ET desde el modal de UPDATE
+    onUpdateOpenGrupoEt: async function () {
+        const oUpdateModel = this.getView().getModel("updateModel");
+
+        // 👇 Tomamos el objeto actual (soporta /current o raíz)
+        const oUpdateData  = oUpdateModel.getProperty("/current") || oUpdateModel.getData() || {};
+
+        const sSoc  = oUpdateData.IDSOCIEDAD;
+        const sCedi = oUpdateData.IDCEDI;
 
         if (!sSoc || !sCedi) {
             MessageToast.show("Selecciona primero Sociedad y CEDI.");
@@ -1001,44 +1021,58 @@ sap.ui.define([
         // 🔴 Indicamos que el diálogo está en modo "update"
         this._grupoEtEditMode = "update";
 
+        // 👇 Aseguramos que los catálogos estén cargados
+        if (!this._bCatalogLoaded) {
+            await this._loadExternalCatalogData();
+            this._bCatalogLoaded = true;
+        }
+
         const oCascade = this.getView().getModel("cascadeModel");
         const oGM      = this.getView().getModel("grupoEtModel");
 
-        // 1) Tomamos TODAS las etiquetas completas (las que traen IDETIQUETA y ETIQUETA)
-        const aAllEtiquetas = oCascade.getProperty("/etiquetasAll") || [];
+        // 1) Tomamos todas las etiquetas (All o la lista normal)
+        const aAllEtiquetas =
+            oCascade.getProperty("/etiquetasAll") ||
+            oCascade.getProperty("/etiquetas")   ||
+            [];
 
-        // 2) Filtramos solo las de la Sociedad / CEDI actuales
+          console.log("Sociedad UPDATE:", sSoc, "CEDI UPDATE:", sCedi);
+          console.log("EtiquetasAll:", aAllEtiquetas);
+
+        // 2) Filtramos por Sociedad / CEDI
         const aFiltradas = aAllEtiquetas.filter(e =>
             String(e.IDSOCIEDAD) === String(sSoc) &&
             String(e.IDCEDI)     === String(sCedi)
         );
 
-        // 3) Mapeamos al formato que usa el diálogo:
-        //    key  = IDETIQUETA (ID)
-        //    text = ETIQUETA  (descripción legible)
+        // 3) Mapeamos al formato que usa el diálogo
         const aComboItems = aFiltradas.map(e => ({
-            key:        e.IDETIQUETA,
-            text:       e.ETIQUETA || e.IDETIQUETA,
+            key: e.IDETIQUETA,
+            text: 
+                (e.text && String(e.text).trim()) ||
+                (e.ALIAS && String(e.ALIAS).trim()) ||
+                (e.ETIQUETA && String(e.ETIQUETA).trim()) ||
+                e.IDETIQUETA,
             IDETIQUETA: e.IDETIQUETA,
-            ETIQUETA:   e.ETIQUETA
+            RAW_TEXT: e.text || e.ETIQUETA
         }));
 
-        // 4) Guardamos la lista en grupoEtModel para que el ComboBox la muestre
+        // 4) Guardamos en grupoEtModel para que el ComboBox lo muestre
         oGM.setProperty("/etiquetas", aComboItems);
 
-        // 5) Limpiamos selección previa del diálogo
-        oGM.setProperty("/selectedEtiqueta", null);
-        oGM.setProperty("/selectedValor",   null);
+        // 5) Precargamos selección del registro (si ya tenía grupo ET)
+        oGM.setProperty("/selectedEtiqueta", oUpdateData.IDETIQUETA || null);
+        oGM.setProperty("/selectedValor",   oUpdateData.IDVALOR    || null);
         oGM.setProperty("/valoresList",     []);
-        oGM.setProperty("/displayName",     "");
+        oGM.setProperty("/displayName",     oUpdateData.IDGRUPOET  || "");
 
-        // 6) Si el registro ya tiene IDGRUPOET, precargamos la selección
-        this._preloadGrupoEtForUpdate();
+        // Si ya tienes lógica extra para precargar valores, la llamas aquí
+        this._preloadGrupoEtForUpdate && this._preloadGrupoEtForUpdate();
 
-        // 7) Abrimos (o creamos) el fragmento del diálogo
+        // 6) Abrimos (o creamos) el fragmento del diálogo
         if (!this._oGrupoEtDialog) {
             sap.ui.core.Fragment.load({
-                id:   this.getView().getId() + "--grupoEtDialog",
+                id: this.getView().getId() + "--grupoEtDialog",
                 name: "com.itt.ztgruposet.frontendztgruposet.view.fragments.GrupoEtDialog",
                 controller: this
             }).then(oDialog => {
@@ -1052,12 +1086,13 @@ sap.ui.define([
     },
 
     _preloadGrupoEtForUpdate: function () {
-      const oUpdate = this.getView().getModel("updateModel");
-      const sGrupoEt = oUpdate.getProperty("/IDGRUPOET"); // Ej: "ETI001-VAL002"
+      const oUpdate  = this.getView().getModel("updateModel");
+      const oGM      = this.getView().getModel("grupoEtModel");
+      const oCascade = this.getView().getModel("cascadeModel");
+
+      const sGrupoEt = oUpdate.getProperty("/IDGRUPOET"); // p.ej. "TURNO_OPERATIVO-TURNO_MATUTINO"
 
       if (!sGrupoEt || !sGrupoEt.includes("-")) {
-        // Si no hay valor o formato incorrecto, limpiar
-        const oGM = this.getView().getModel("grupoEtModel");
         oGM.setProperty("/selectedEtiqueta", null);
         oGM.setProperty("/selectedValor", null);
         oGM.setProperty("/valoresList", []);
@@ -1065,27 +1100,39 @@ sap.ui.define([
         return;
       }
 
-      // Separar Etiqueta-Valor
       const [sEtiId, sValId] = sGrupoEt.split("-");
 
-      const oGM = this.getView().getModel("grupoEtModel");
-      const oCascade = this.getView().getModel("cascadeModel");
-
-      // Setear etiqueta seleccionada
-      oGM.setProperty("/selectedEtiqueta", sEtiId);
-
-      // Cargar valores para esa etiqueta
-      const selectedSoc = oUpdate.getProperty("/IDSOCIEDAD");
+      const selectedSoc  = oUpdate.getProperty("/IDSOCIEDAD");
       const selectedCedi = oUpdate.getProperty("/IDCEDI");
-      const valoresAll = oCascade.getProperty("/valoresAll") || [];
+      const valoresAll   = oCascade.getProperty("/valoresAll") || [];
 
-      const filtered = valoresAll.filter(v =>
-        v.IDSOCIEDAD == selectedSoc &&
-        v.IDCEDI == selectedCedi &&
-        v.parentEtiqueta == sEtiId
+      const aFiltered = valoresAll.filter(v =>
+        String(v.IDSOCIEDAD)     === String(selectedSoc) &&
+        String(v.IDCEDI)         === String(selectedCedi) &&
+        String(v.parentEtiqueta) === String(sEtiId)
       );
 
-      oGM.setProperty("/valoresList", filtered);
+      // 🔁 Mismo mapeo que en onGrupoEtiquetaChange
+      const aMappedVals = aFiltered.map(v => {
+        const sTxt =
+          (v.text && String(v.text).trim()) ||
+          (v.ALIAS && v.ALIAS.trim()) ||
+          (v.VALOR && v.VALOR.trim()) ||
+          v.IDVALOR;
+
+        return {
+          IDVALOR:        v.IDVALOR,
+          VALOR:          sTxt,
+          ALIAS:          v.ALIAS || "",
+          RAW_VALOR:      v.text || v.VALOR,
+          IDSOCIEDAD:     v.IDSOCIEDAD,
+          IDCEDI:         v.IDCEDI,
+          parentEtiqueta: v.parentEtiqueta
+        };
+      });
+
+      oGM.setProperty("/selectedEtiqueta", sEtiId);
+      oGM.setProperty("/valoresList", aMappedVals);
       oGM.setProperty("/selectedValor", sValId);
       oGM.setProperty("/displayName", sGrupoEt);
     },
@@ -2111,15 +2158,16 @@ sap.ui.define([
         String(e.IDSOCIEDAD) === String(sSoc) &&
         String(e.IDCEDI)     === String(sCedi)
       ).map(e => {
-          const sTxt =
-              (e.text && String(e.text).trim()) ||   //AHORA USAMOS text
+              const sTxt =
+              (e.text && String(e.text).trim()) ||
               (e.ALIAS && e.ALIAS.trim()) ||
               (e.ETIQUETA && e.ETIQUETA.trim()) ||
               e.IDETIQUETA;
 
           return {
               IDETIQUETA:  e.IDETIQUETA,   // ID real
-              ETIQUETA:    sTxt,           // TEXTO QUE VAS A MOSTRAR
+              ETIQUETA:    sTxt,           // por si lo usas en filtros
+              text:        sTxt,           // ESTA ES LA CLAVE
               ALIAS:       e.ALIAS || "",
               RAW_ETIQUETA: e.text || e.ETIQUETA
           };
@@ -2302,9 +2350,10 @@ sap.ui.define([
     // Pre-cargar el modelo grupoEtModel a partir del inlineEdit
     _preloadGrupoEtForInline: function () {
       const oInline  = this.getView().getModel("inlineEdit");
-      const sGrupoEt = oInline.getProperty("/current/IDGRUPOET");  
+      const oGM      = this.getView().getModel("grupoEtModel");
+      const oCascade = this.getView().getModel("cascadeModel");
 
-      const oGM = this.getView().getModel("grupoEtModel");
+      const sGrupoEt = oInline.getProperty("/current/IDGRUPOET");  // p.ej. "TURNO_OPERATIVO-TURNO_MATUTINO"
 
       if (!sGrupoEt || !sGrupoEt.includes("-")) {
         oGM.setProperty("/selectedEtiqueta", null);
@@ -2316,19 +2365,36 @@ sap.ui.define([
 
       const [sEtiId, sValId] = sGrupoEt.split("-");
 
-      const oCascade = this.getView().getModel("cascadeModel");
-      const sSoc     = oInline.getProperty("/current/IDSOCIEDAD"); 
-      const sCedi    = oInline.getProperty("/current/IDCEDI");     
+      const sSoc  = oInline.getProperty("/current/IDSOCIEDAD");
+      const sCedi = oInline.getProperty("/current/IDCEDI");
       const aValsAll = oCascade.getProperty("/valoresAll") || [];
 
       const aFilteredVals = aValsAll.filter(v =>
-        String(v.IDSOCIEDAD)    === String(sSoc) &&
-        String(v.IDCEDI)        === String(sCedi) &&
+        String(v.IDSOCIEDAD)     === String(sSoc) &&
+        String(v.IDCEDI)         === String(sCedi) &&
         String(v.parentEtiqueta) === String(sEtiId)
       );
 
+      const aMappedVals = aFilteredVals.map(v => {
+        const sTxt =
+          (v.text && String(v.text).trim()) ||
+          (v.ALIAS && v.ALIAS.trim()) ||
+          (v.VALOR && v.VALOR.trim()) ||
+          v.IDVALOR;
+
+        return {
+          IDVALOR:        v.IDVALOR,
+          VALOR:          sTxt,
+          ALIAS:          v.ALIAS || "",
+          RAW_VALOR:      v.text || v.VALOR,
+          IDSOCIEDAD:     v.IDSOCIEDAD,
+          IDCEDI:         v.IDCEDI,
+          parentEtiqueta: v.parentEtiqueta
+        };
+      });
+
       oGM.setProperty("/selectedEtiqueta", sEtiId);
-      oGM.setProperty("/valoresList", aFilteredVals);
+      oGM.setProperty("/valoresList", aMappedVals);
       oGM.setProperty("/selectedValor", sValId);
       oGM.setProperty("/displayName", sGrupoEt);
     },
@@ -2495,16 +2561,16 @@ sap.ui.define([
 
       // ETIQUETA (usa texto amigable: ALIAS > ETIQUETA > IDETIQUETA)
       const oCmbEtiquetaInline = new ComboBox({
-        width: "100%",
-        items: {
-          path: "cascadeModel>/etiquetas",
-          template: new CoreItem({
-            key:  "{cascadeModel>IDETIQUETA}", // ID real de la etiqueta
-            text: "{cascadeModel>text}"        // ALIAS / texto bonito
-          })
-        },
-        selectedKey: "{inlineEdit>/current/IDETIQUETA}",
-        change: this.onInlineEtiquetaChange.bind(this)
+          width: "100%",
+          items: {
+              path: "cascadeModel>/etiquetas",
+              template: new CoreItem({
+                  key:  "{cascadeModel>IDETIQUETA}", // o {cascadeModel>key}
+                  text: "{cascadeModel>text}"        // 👈 ahora sí existe
+              })
+          },
+          selectedKey: "{inlineEdit>/current/IDETIQUETA}",
+          change: this.onInlineEtiquetaChange.bind(this)
       });
 
       // 🔍 Filtro: busca en TODO el texto + el key (IDETIQUETA)
