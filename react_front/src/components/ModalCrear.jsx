@@ -16,7 +16,6 @@ import ButtonDesign from "@ui5/webcomponents/dist/types/ButtonDesign.js";
 import ModalFiltroET from "./ModalFiltroET.jsx";
 
 const URL_BASE_BACKEND_CINNALOVERS = "https://app-restful-sap-cds.onrender.com";
-const LOGGED_USER = "FMIRADAJ";
 
 const ModalCrear = ({
     isModalOpen,
@@ -162,7 +161,7 @@ const ModalCrear = ({
             };
 
             const processType = "Create";
-            const url = `${URL_BASE_BACKEND_CINNALOVERS}/api/security/gruposet/crud?ProcessType=${processType}&DBServer=${dbConnection}&LoggedUser=${LOGGED_USER}`;
+            const url = `${URL_BASE_BACKEND_CINNALOVERS}/api/security/gruposet/crud?ProcessType=${processType}&DBServer=${dbConnection}&LoggedUser=FMIRANDAJ`;
 
             const res = await axios.post(url, registro, {
                 headers: {
@@ -172,7 +171,7 @@ const ModalCrear = ({
 
             if (res.data?.success || res.status === 200) {
                 limpiarFormulario();
-                refetchData();
+                await refetchData();
                 handleCloseModal();
                 showToastMessage(`✅ Registro creado correctamente`);
             } else {
@@ -242,7 +241,7 @@ const ModalCrear = ({
                                 >
                                     Guardar
                                 </Button>
-                                <Button design="Transparent" onClick={handleCancelar}>
+                                <Button design="Transparent" onClick={handleCancelar} disabled={isLoading}>
                                     Cancelar
                                 </Button>
                             </>
@@ -290,6 +289,7 @@ const ModalCrear = ({
                                 placeholder="Selecciona una sociedad"
                                 filter="Contains"
                                 style={{ width: '100%' }}
+                                disabled={isLoading}
                             >
                                 {sociedadesCatalog.map(item =>
                                     <ComboBoxItem
@@ -306,7 +306,7 @@ const ModalCrear = ({
                             <Label required>CEDI:</Label>
                             <ComboBox
                                 value={getDisplayText(filteredCedisCatalog, cedis)}
-                                disabled={!sociedad || filteredCedisCatalog.length === 0}
+                                disabled={!sociedad || filteredCedisCatalog.length === 0 || isLoading}
                                 onSelectionChange={(e) => {
                                     const selectedItem = e.detail.item;
                                     const selectedKey = selectedItem?.dataset.key;
@@ -352,7 +352,7 @@ const ModalCrear = ({
                             <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
                                 <ComboBox
                                     value={getDisplayText(filteredEtiquetasCatalog, etiqueta)}
-                                    disabled={!cedis || filteredEtiquetasCatalog.length === 0}
+                                    disabled={!cedis || filteredEtiquetasCatalog.length === 0 || isLoading}
                                     onSelectionChange={(e) => {
                                         const selectedItem = e.detail.item;
                                         const selectedKey = selectedItem?.dataset.key;
@@ -399,7 +399,7 @@ const ModalCrear = ({
                             <Label required>Valor:</Label>
                             <ComboBox
                                 value={getDisplayText(filteredValoresCatalog, valor)}
-                                disabled={!etiqueta || filteredValoresCatalog.length === 0}
+                                disabled={!etiqueta || filteredValoresCatalog.length === 0 || isLoading}
                                 onSelectionChange={(e) => {
                                     const selectedItem = e.detail.item;
                                     const selectedKey = selectedItem?.dataset.key;
@@ -435,7 +435,7 @@ const ModalCrear = ({
                                     icon="edit"
                                     design="Transparent"
                                     onClick={() => setIsModalEditGrupoETOpen(true)}
-                                    disabled={!sociedad || !cedis}
+                                    disabled={!sociedad || !cedis || isLoading}
                                     title="Generar Grupo ET"
                                 />
                             </div>
@@ -449,6 +449,7 @@ const ModalCrear = ({
                                 onChange={(e) => setId(e.target.value)}
                                 placeholder="ID del grupo"
                                 style={{ width: '100%' }}
+                                disabled={isLoading}
                             />
                         </div>
 
@@ -462,6 +463,7 @@ const ModalCrear = ({
                                 style={{ width: '100%', minHeight: '80px' }}
                                 growing
                                 growingMaxLines={5}
+                                disabled={isLoading}
                             />
                         </div>
                     </FlexBox>

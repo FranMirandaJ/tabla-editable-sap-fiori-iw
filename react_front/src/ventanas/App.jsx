@@ -447,30 +447,31 @@ export default function App() {
   };
 
   const handleGuardarCambiosEdicion = async (editedData, originalData) => {
+
+
     if (!editedData.sociedad || !editedData.sucursal || !editedData.etiqueta || !editedData.valor || !editedData.idgroup || !editedData.idg) {
       showToastMessage("❌ Completa Sociedad, CEDI, Etiqueta, Valor, Grupo Etiqueta y ID.");
       return;
     }
+
     setLoading(true);
     try {
       const url = `${URL_BASE}/api/security/gruposet/crud?ProcessType=UpdateOne&DBServer=${dbConnection}&LoggedUser=FMIRANDAJ`;
 
       const payload = {
-        // Llaves del registro ORIGINAL para que el backend lo encuentre
-        IDSOCIEDAD: originalData.sociedad,
-        IDCEDI: originalData.sucursal,
-        IDETIQUETA: originalData.etiqueta,
-        IDVALOR: originalData.valor,
-        IDGRUPOET: originalData.idgroup,
-        ID: originalData.idg,
-        // 'data' contiene todos los campos con sus NUEVOS valores
+        IDSOCIEDAD: parseInt(originalData.sociedad),
+        IDCEDI: parseInt(originalData.sucursal),
+        IDETIQUETA: String(originalData.etiqueta),
+        IDVALOR: String(originalData.valor),
+        IDGRUPOET: String(originalData.idgroup),
+        ID: String(originalData.idg),
         data: {
-          IDSOCIEDAD: editedData.sociedad,
-          IDCEDI: editedData.sucursal,
-          IDETIQUETA: editedData.etiqueta,
-          IDVALOR: editedData.valor,
-          IDGRUPOET: editedData.idgroup,
-          ID: editedData.idg,
+          IDSOCIEDAD: parseInt(editedData.sociedad),
+          IDCEDI: parseInt(editedData.sucursal),
+          IDETIQUETA: String(editedData.etiqueta),
+          IDVALOR: String(editedData.valor),
+          IDGRUPOET: String(editedData.idgroup),
+          ID: String(editedData.idg),
           INFOAD: editedData.info,
           ACTIVO: editedData.estado !== false,
           BORRADO: editedData.estado || false
@@ -482,8 +483,6 @@ export default function App() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload)
       });
-
-      console.log("Payload enviado a UpdateOne:", payload);
 
       const json = await res.json().catch(() => ({}));
 
@@ -498,10 +497,10 @@ export default function App() {
 
 
       setExpandedRowId(null); // Cierra la fila después de guardar
+      // 🔄 Refrescar tabla
+      await fetchData();
       showToastMessage("✅ Cambios guardados correctamente");
 
-      // 🔄 Refrescar tabla
-      fetchData();
     } catch (error) {
       console.error("Error al guardar cambios:", error);
       showToastMessage("❌ No se pudieron guardar los cambios");
@@ -569,7 +568,7 @@ export default function App() {
       const response = await axios.post(url, payload);
 
       // 🔄 Refrescar la tabla
-      fetchData();
+      await fetchData();
       showToastMessage("✅ Registro activado correctamente");
 
     } catch (err) {
@@ -602,7 +601,7 @@ export default function App() {
       const response = await axios.post(url, payload);
 
       // 🔄 Refrescar tabla
-      fetchData();
+      await fetchData();
 
       showToastMessage("✅ Registro desactivado");
 
@@ -650,13 +649,13 @@ export default function App() {
 
       console.log("📥 Respuesta:", response);
 
+      await fetchData();
       showToastMessage(
         selectedRowsArray.length > 1
           ? "✅ Registros eliminados correctamente."
           : "✅ Registro eliminado correctamente."
       );
       // 🔄 Refrescar tabla
-      fetchData();
 
     } catch (err) {
       console.error("❌Error al eliminar:", err);
@@ -1468,7 +1467,7 @@ export default function App() {
                           name="idg"
                           value={editingRowData?.idg || ''}
                           onInput={handleEditInputChange}
-                          disabled={loading}
+                          disabled={dbConnection === "Azure" || loading}
                         />
                       </TableCell>
 
