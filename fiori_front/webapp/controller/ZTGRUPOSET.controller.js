@@ -2616,6 +2616,13 @@ sap.ui.define([
         return sText.indexOf(sQuery) !== -1 || sKey.indexOf(sQuery) !== -1;
       });
 
+      const bIsAzure = this.getView().getModel("config").getProperty("/dbServer") === "azure";
+
+      const oIdInputInline = new sap.m.Input({
+        value: "{inlineEdit>/current/ID}",
+        editable: !bIsAzure   // 👈 false si es AZURE, true si es Mongo
+      });
+
       // Subfila con todos los controles
       const oDetailItem = new sap.m.ColumnListItem({
         type: "Inactive",
@@ -2654,9 +2661,7 @@ sap.ui.define([
           }),
 
           // ID
-          new sap.m.Input({
-            value: "{inlineEdit>/current/ID}"
-          }),
+          oIdInputInline,
 
           // INFO ADICIONAL
           new sap.m.Input({
