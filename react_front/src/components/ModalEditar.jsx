@@ -16,7 +16,6 @@ import ButtonDesign from "@ui5/webcomponents/dist/types/ButtonDesign.js";
 import ModalFiltroET from "./ModalFiltroET.jsx";
 
 const URL_BASE_BACKEND_CINNALOVERS = "https://app-restful-sap-cds.onrender.com";
-const LOGGED_USER = "FMIRADAJ";
 
 const ModalEditar = ({
     isModalOpen,
@@ -42,13 +41,13 @@ const ModalEditar = ({
     const [filteredValoresCatalog, setFilteredValoresCatalog] = useState([]);
 
     // Estados para los campos del formulario - INICIALIZADOS CON LOS DATOS DEL REGISTRO
-    const [sociedad, setSociedad] = useState(registroEditar?.sociedad || "");
-    const [cedis, setCedis] = useState(registroEditar?.sucursal || "");
-    const [etiqueta, setEtiqueta] = useState(registroEditar?.etiqueta || "");
-    const [valor, setValor] = useState(registroEditar?.valor || "");
-    const [grupoET, setGrupoET] = useState(registroEditar?.idgroup || "");
-    const [id, setId] = useState(registroEditar?.idg || "");
-    const [infoAdicional, setInfoAdicional] = useState(registroEditar?.info || "");
+    const [sociedad, setSociedad] = useState(registroEditar.sociedad);
+    const [cedis, setCedis] = useState(registroEditar.sucursal);
+    const [etiqueta, setEtiqueta] = useState(registroEditar.etiqueta);
+    const [valor, setValor] = useState(registroEditar.valor);
+    const [grupoET, setGrupoET] = useState(registroEditar.idgroup);
+    const [id, setId] = useState(registroEditar.idg);
+    const [infoAdicional, setInfoAdicional] = useState(registroEditar.info);
 
     // Estado de filtro para las etiquetas
     const [filters, setFilters] = useState({
@@ -70,7 +69,7 @@ const ModalEditar = ({
 
             // Inicializar catálogos filtrados basados en el registro
             if (registroEditar.sociedad) {
-                const cedisFiltrados = cedisCatalog.filter(c => 
+                const cedisFiltrados = cedisCatalog.filter(c =>
                     c.parentSoc?.toString() === registroEditar.sociedad?.toString()
                 );
                 setFilteredCedisCatalog(cedisFiltrados);
@@ -130,14 +129,14 @@ const ModalEditar = ({
 
         // Aplicar filtro por colección
         if (filtros.coleccion && filtros.coleccion.length > 0) {
-            filtered = filtered.filter(etiqueta => 
+            filtered = filtered.filter(etiqueta =>
                 filtros.coleccion.includes(etiqueta.COLECCION)
             );
         }
 
         // Aplicar filtro por sección
         if (filtros.seccion && filtros.seccion.length > 0) {
-            filtered = filtered.filter(etiqueta => 
+            filtered = filtered.filter(etiqueta =>
                 filtros.seccion.includes(etiqueta.SECCION)
             );
         }
@@ -150,7 +149,7 @@ const ModalEditar = ({
         if (filteredEtiquetasCatalogOriginal.length > 0) {
             const etiquetasFiltradas = applyFilters(filteredEtiquetasCatalogOriginal, filters);
             setFilteredEtiquetasCatalog(etiquetasFiltradas);
-            
+
             // Si la etiqueta actualmente seleccionada no está en los resultados filtrados, limpiar la selección
             if (etiqueta && !etiquetasFiltradas.find(et => et.key === etiqueta)) {
                 setEtiqueta("");
@@ -189,18 +188,18 @@ const ModalEditar = ({
         }
         try {
             const registroActualizado = {
-                IDSOCIEDAD: sociedad,
-                IDCEDI: cedis,
-                IDETIQUETA: etiqueta,
-                IDVALOR: valor,
+                IDSOCIEDAD: parseInt(sociedad),
+                IDCEDI: parseInt(cedis),
+                IDETIQUETA: String(etiqueta),
+                IDVALOR: String(valor),
                 INFOAD: infoAdicional,
-                IDGRUPOET: grupoET,
-                ID: id,
-                ACTIVO: true,
+                IDGRUPOET: String(grupoET),
+                ID: String(id),
+                ACTIVO: registroEditar.estado !== false,
+                BORRADO: !registroEditar.estado || false,
             };
 
-            const processType = "UpdateOne";
-            const url = `${URL_BASE_BACKEND_CINNALOVERS}/api/security/gruposet/crud?ProcessType=${processType}&DBServer=${dbConnection}&LoggedUser=${LOGGED_USER}`;
+            const url = `${URL_BASE_BACKEND_CINNALOVERS}/api/security/gruposet/crud?ProcessType=UpdateOne&DBServer=${dbConnection}&LoggedUser=FMIRANDAJ`;
 
             // Para editar necesitamos enviar tanto los datos originales como los nuevos
             const payload = {
@@ -215,20 +214,28 @@ const ModalEditar = ({
                 data: registroActualizado
             };
 
-            const res = await axios.post(url, payload, {
-                headers: {
-                    "Content-Type": "application/json",
-                },
+            const res = await fetch(url, {
+                method: "POST",
+                headers: { "Content-Type": "application/json", },
+                body: JSON.stringify(payload)
             });
 
-            if (res.data?.success || res.status === 200) {
-                limpiarFormulario();
-                refetchData();
-                handleCloseModal();
-                showToastMessage(`✅ Registro actualizado correctamente`);
-            } else {
-                showToastMessage(`⚠️ Error al actualizar el registro`);
+            const json = await res.json();
+
+            if (!res.ok) {
+                if (res.status === 409) {
+                    showToastMessage("❌ Ya existe un registro con esa llave compuesta.");
+                    return;
+                }
+                // Para otros errores, lanzamos una excepción para que la capture el catch.
+                throw new Error("Error HTTP " + res.status + (json.messageUSR ? " - " + json.messageUSR : ""));
             }
+
+            limpiarFormulario();
+            await refetchData();
+            handleCloseModal();
+            showToastMessage(`✅ Registro actualizado correctamente`);
+
 
         } catch (error) {
             if (error.response?.status === 409) {
@@ -253,7 +260,7 @@ const ModalEditar = ({
             setId(registroEditar.idg || "");
             setInfoAdicional(registroEditar.info || "");
         }
-        
+
         // Resetear filtros
         setFilters({
             ultFechaMod: "todos",
@@ -292,7 +299,11 @@ const ModalEditar = ({
                                 >
                                     Actualizar
                                 </Button>
-                                <Button design="Transparent" onClick={handleCancelar}>
+                                <Button
+                                    design="Transparent"
+                                    onClick={handleCancelar}
+                                    disabled={isLoading}
+                                >
                                     Cancelar
                                 </Button>
                             </>
@@ -340,6 +351,7 @@ const ModalEditar = ({
                                 placeholder="Selecciona una sociedad"
                                 filter="Contains"
                                 style={{ width: '100%' }}
+                                disabled={isLoading}
                             >
                                 {sociedadesCatalog.map(item =>
                                     <ComboBoxItem
@@ -356,7 +368,7 @@ const ModalEditar = ({
                             <Label required>CEDI:</Label>
                             <ComboBox
                                 value={getDisplayText(filteredCedisCatalog, cedis)}
-                                disabled={!sociedad || filteredCedisCatalog.length === 0}
+                                disabled={!sociedad || filteredCedisCatalog.length === 0 || isLoading}
                                 onSelectionChange={(e) => {
                                     const selectedItem = e.detail.item;
                                     const selectedKey = selectedItem?.dataset.key;
@@ -402,7 +414,7 @@ const ModalEditar = ({
                             <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
                                 <ComboBox
                                     value={getDisplayText(filteredEtiquetasCatalog, etiqueta)}
-                                    disabled={!cedis || filteredEtiquetasCatalog.length === 0}
+                                    disabled={!cedis || filteredEtiquetasCatalog.length === 0 || isLoading}
                                     onSelectionChange={(e) => {
                                         const selectedItem = e.detail.item;
                                         const selectedKey = selectedItem?.dataset.key;
@@ -419,8 +431,8 @@ const ModalEditar = ({
                                         setFilteredValoresCatalog(filtered);
                                     }}
                                     placeholder={
-                                        filteredEtiquetasCatalog.length === 0 
-                                            ? "No hay etiquetas disponibles" 
+                                        filteredEtiquetasCatalog.length === 0
+                                            ? "No hay etiquetas disponibles"
                                             : `Etiquetas (${filteredEtiquetasCatalog.length})`
                                     }
                                     filter="Contains"
@@ -449,7 +461,7 @@ const ModalEditar = ({
                             <Label required>Valor:</Label>
                             <ComboBox
                                 value={getDisplayText(filteredValoresCatalog, valor)}
-                                disabled={!etiqueta || filteredValoresCatalog.length === 0}
+                                disabled={!etiqueta || filteredValoresCatalog.length === 0 || isLoading}
                                 onSelectionChange={(e) => {
                                     const selectedItem = e.detail.item;
                                     const selectedKey = selectedItem?.dataset.key;
@@ -485,7 +497,7 @@ const ModalEditar = ({
                                     icon="edit"
                                     design="Transparent"
                                     onClick={() => setIsModalEditGrupoETOpen(true)}
-                                    disabled={!sociedad || !cedis}
+                                    disabled={!sociedad || !cedis || isLoading}
                                     title="Generar Grupo ET"
                                 />
                             </div>
@@ -499,6 +511,7 @@ const ModalEditar = ({
                                 onChange={(e) => setId(e.target.value)}
                                 placeholder="ID del grupo"
                                 style={{ width: '100%' }}
+                                disabled={dbConnection === "Azure"}
                             />
                         </div>
 
@@ -512,6 +525,7 @@ const ModalEditar = ({
                                 style={{ width: '100%', minHeight: '80px' }}
                                 growing
                                 growingMaxLines={5}
+                                disabled={isLoading}
                             />
                         </div>
                     </FlexBox>
