@@ -374,12 +374,41 @@ sap.ui.define([
     onDeactivePress: async function () {
       const rec = this._getSelectedRecord();
       if (!rec) {
-        MessageToast.show("Selecciona un registro primero.");
+        sap.m.MessageToast.show("Selecciona un registro primero.");
         return;
       }
 
-      const url = this._getApiParams("DeleteOne");
-      const payload = this._buildDeletePayload(rec);
+      // Saber si estamos en Azure o Mongo
+      const oSwitchModel = this.getView().getModel("dbServerSwitch");
+      const bIsAzure = oSwitchModel.getProperty("/state");
+
+      // Elegir ProcessType y armar payload según el servidor
+      let sProcessType, url, payload;
+
+      if (bIsAzure) {
+        //  AZURE: usamos UpdateOne para hacer baja lógica
+        sProcessType = "UpdateOne";
+        url = this._getApiParams(sProcessType);
+
+        payload = {
+          // llaves ORIGINALES que identifican el registro
+          ...this._buildDeletePayload(rec),
+          // datos a actualizar
+          data: {
+            ACTIVO: false,
+            BORRADO: true,
+            FECHAULTMOD: this._todayStr(),
+            HORAULTMOD: this._timeStr(),
+            USUARIOMOD: "FMIRANDAJ"
+          }
+        };
+
+      } else {
+        // MONGO: podemos seguir usando DeleteOne del backend
+        sProcessType = "DeleteOne";
+        url = this._getApiParams(sProcessType);
+        payload = this._buildDeletePayload(rec); // sólo las llaves
+      }
 
       const doCall = async () => {
         this.getView().setBusy(true);
@@ -389,29 +418,34 @@ sap.ui.define([
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify(payload)
           });
-          const json = await res.json().catch(() => ({}));
-          if (!res.ok) throw new Error("HTTP " + res.status);
 
-          // Éxito
-          MessageToast.show("Registro desactivado correctamente.");
+          const json = await res.json().catch(() => ({}));
+          if (!res.ok) {
+            throw new Error("HTTP " + res.status + (json.messageUSR ? " - " + json.messageUSR : ""));
+          }
+
+          sap.m.MessageToast.show("Registro desactivado correctamente.");
           await this._loadData(); // recarga la tabla
+          this.byId("tblGrupos").removeSelections(true);
+          this.onSelectionChange();
+
         } catch (e) {
-          MessageBox.error("No se pudo desactivar: " + e.message);
-          // console.error(e); // si quieres ver detalle en consola
+          sap.m.MessageBox.error("No se pudo desactivar: " + e.message);
         } finally {
           this.getView().setBusy(false);
         }
       };
 
-      MessageBox.confirm(
+      sap.m.MessageBox.confirm(
         `¿Desactivar el grupo "${rec.IDETIQUETA}" (ID ${rec.ID})?`,
         {
           title: "Confirmar desactivación",
-          actions: [MessageBox.Action.OK, MessageBox.Action.CANCEL],
-          onClose: (act) => { if (act === MessageBox.Action.OK) doCall(); }
+          actions: [sap.m.MessageBox.Action.OK, sap.m.MessageBox.Action.CANCEL],
+          onClose: (act) => { if (act === sap.m.MessageBox.Action.OK) doCall(); }
         }
       );
     },
+
     //activar con updateOne ///////////
 
     onActivePress: async function () {
