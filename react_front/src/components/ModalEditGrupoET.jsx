@@ -10,7 +10,16 @@ import {
     FlexBox,
 } from "@ui5/webcomponents-react";
 
-const ModalEditGrupoET = ({ isModalOpen, handleCloseModal, setGrupoET, etiquetas, valores, sociedadSeleccionada, cediSeleccionado }) => {
+const ModalEditGrupoET = ({
+    isModalOpen,
+    handleCloseModal,
+    setGrupoET,
+    etiquetas,
+    valores,
+    sociedadSeleccionada,
+    cediSeleccionado,
+    currentGrupoET
+}) => {
 
     const [etiqueta, setEtiqueta] = useState("");
     const [valor, setValor] = useState("");
@@ -44,10 +53,47 @@ const ModalEditGrupoET = ({ isModalOpen, handleCloseModal, setGrupoET, etiquetas
                 et.IDCEDI?.toString() === cediSeleccionado?.toString()
             );
             setFilteredEtiquetas(etiquetasFiltradas);
+            // Lógica de Pre-selección basada en currentGrupoET
+            if (currentGrupoET && currentGrupoET.includes("-")) {
+                const partes = currentGrupoET.split("-");
+                // Tomamos la primera parte como etiqueta y la segunda como valor
+                const initEtiquetaKey = partes[0];
+                const initValorKey = partes[1];
+
+                if (initEtiquetaKey && initValorKey) {
+                    // Setear claves lógicas
+                    setEtiqueta(initEtiquetaKey);
+                    setValor(initValorKey);
+
+                    // Buscar objetos completos para obtener el Texto para los inputs visuales
+                    const etObj = etiquetas.find(e => e.key.toString() === initEtiquetaKey.toString());
+                    const valObj = valores.find(v => v.key.toString() === initValorKey.toString());
+
+                    // Setear textos visuales formato "Texto (Key)"
+                    setEtiquetaInput(formatItemText(etObj?.text, initEtiquetaKey));
+                    setValorInput(formatItemText(valObj?.text, initValorKey));
+
+                    // IMPORTANTE: Pre-calcular los valores filtrados para esa etiqueta
+                    // Usando el filtrado estricto que corregimos anteriormente
+                    const valoresFiltrados = valores.filter(v =>
+                        v.parentEtiqueta?.toString() === initEtiquetaKey.toString() &&
+                        v.IDSOCIEDAD?.toString() === sociedadSeleccionada?.toString() &&
+                        v.IDCEDI?.toString() === cediSeleccionado?.toString()
+                    );
+                    setFilteredValores(valoresFiltrados);
+                }
+            } else {
+                // Si no hay grupo actual o es inválido, limpiamos selección pero mantenemos etiquetas filtradas
+                setEtiqueta("");
+                setValor("");
+                setEtiquetaInput("");
+                setValorInput("");
+                setFilteredValores([]);
+            }
         } else {
             limpiarEstado();
         }
-    }, [isModalOpen, sociedadSeleccionada, cediSeleccionado, etiquetas]);
+    }, [isModalOpen, sociedadSeleccionada, cediSeleccionado, etiquetas, currentGrupoET]);
 
     const handleAceptar = () => {
         if (etiqueta && valor) {

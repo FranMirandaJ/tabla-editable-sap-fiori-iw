@@ -555,6 +555,7 @@ const ModalEditar = ({
                     valores={valoresCatalog}
                     sociedadSeleccionada={sociedad}
                     cediSeleccionado={cedis}
+                    currentGrupoET={grupoET}
                 />
             )}
 

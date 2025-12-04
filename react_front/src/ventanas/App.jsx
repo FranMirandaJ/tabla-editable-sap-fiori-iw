@@ -1564,6 +1564,7 @@ export default function App() {
         valores={valoresCatalog}
         sociedadSeleccionada={editingRowData?.sociedad}
         cediSeleccionado={editingRowData?.sucursal}
+        currentGrupoET={editingRowData?.idgroup}
       />
 
       {/* Modal de edicion de registro */}
