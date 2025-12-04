@@ -15,19 +15,23 @@ const ModalEditGrupoET = ({ isModalOpen, handleCloseModal, setGrupoET, etiquetas
     const [etiqueta, setEtiqueta] = useState("");
     const [valor, setValor] = useState("");
 
+    const [etiquetaInput, setEtiquetaInput] = useState("");
+    const [valorInput, setValorInput] = useState("");
+
     const [filteredEtiquetas, setFilteredEtiquetas] = useState([]);
     const [filteredValores, setFilteredValores] = useState([]);
 
     // Función para obtener el texto a mostrar basado en el key
-    const getDisplayText = (catalog, key) => {
+    const formatItemText = (text, key) => {
         if (!key) return "";
-        const item = catalog.find(item => item.key?.toString() === key?.toString());
-        return item?.text || key;
+        return `${text || key} (${key})`;
     };
 
     const limpiarEstado = () => {
         setEtiqueta("");
         setValor("");
+        setEtiquetaInput("");
+        setValorInput("");
         setFilteredEtiquetas([]);
         setFilteredValores([]);
     };
@@ -102,34 +106,49 @@ const ModalEditGrupoET = ({ isModalOpen, handleCloseModal, setGrupoET, etiquetas
                     <div>
                         <Label required>Etiqueta:</Label>
                         <ComboBox
-                            value={getDisplayText(filteredEtiquetas, etiqueta)}
+                            value={etiquetaInput}
+                            onInput={(e) => {
+                                // Permitir escribir libremente para filtrar
+                                setEtiquetaInput(e.target.value);
+                            }}
                             onSelectionChange={(e) => {
                                 const selectedItem = e.detail.item;
                                 const selectedKey = selectedItem?.dataset.key;
-                                setEtiqueta(selectedKey || "");
-                                // Limpiar valor y filtrar valores para la etiqueta seleccionada
-                                setValor("");
-                                const valoresFiltrados = valores.filter(v => 
-                                    v.parentEtiqueta === selectedKey
-                                );
-                                setFilteredValores(valoresFiltrados);
+                                const selectedText = selectedItem?.text;
+
+                                if (selectedKey) {
+                                    setEtiqueta(selectedKey);
+                                    // Forzamos el texto del input al formato completo seleccionado
+                                    setEtiquetaInput(selectedText);
+
+                                    // Resetear valor dependiente
+                                    setValor("");
+                                    setValorInput("");
+                                    const valoresFiltrados = valores.filter(v =>
+                                        v.parentEtiqueta === selectedKey
+                                    );
+                                    setFilteredValores(valoresFiltrados);
+                                } else {
+                                    // Si el usuario borra o selecciona algo inválido
+                                    setEtiqueta("");
+                                    setFilteredValores([]);
+                                }
                             }}
                             placeholder={
-                                filteredEtiquetas.length === 0 ? 
-                                "No hay etiquetas disponibles para esta Sociedad/CEDI" : 
-                                "Selecciona una etiqueta"
+                                filteredEtiquetas.length === 0 ?
+                                    "No hay etiquetas disponibles" : "Selecciona una etiqueta"
                             }
                             filter="Contains"
                             style={{ width: '100%' }}
                             disabled={!sociedadSeleccionada || !cediSeleccionado}
                         >
-                            {filteredEtiquetas.map(item =>
-                                <ComboBoxItem 
-                                    key={item.key} 
-                                    data-key={item.key} 
-                                    text={item.text} 
+                            {filteredEtiquetas.map(item => (
+                                <ComboBoxItem
+                                    key={item.key}
+                                    data-key={item.key}
+                                    text={formatItemText(item.text, item.key)}
                                 />
-                            )}
+                            ))}
                         </ComboBox>
                     </div>
 
@@ -137,28 +156,38 @@ const ModalEditGrupoET = ({ isModalOpen, handleCloseModal, setGrupoET, etiquetas
                     <div>
                         <Label required>Valor:</Label>
                         <ComboBox
-                            value={getDisplayText(filteredValores, valor)}
+                            value={valorInput}
+                            onInput={(e) => {
+                                setValorInput(e.target.value);
+                            }}
                             disabled={!etiqueta || filteredValores.length === 0}
                             onSelectionChange={(e) => {
                                 const selectedItem = e.detail.item;
                                 const selectedKey = selectedItem?.dataset.key;
-                                setValor(selectedKey || "");
+                                const selectedText = selectedItem?.text;
+
+                                if (selectedKey) {
+                                    setValor(selectedKey);
+                                    setValorInput(selectedText);
+                                } else {
+                                    setValor("");
+                                }
                             }}
                             placeholder={
                                 !etiqueta ? "Selecciona una etiqueta primero" :
-                                filteredValores.length === 0 ? "No hay valores disponibles para esta etiqueta" : 
-                                "Selecciona un valor"
+                                    filteredValores.length === 0 ? "No hay valores disponibles" :
+                                        "Selecciona un valor"
                             }
                             filter="Contains"
                             style={{ width: '100%' }}
                         >
-                            {filteredValores.map(item =>
-                                <ComboBoxItem 
-                                    key={item.key} 
-                                    data-key={item.key} 
-                                    text={item.text || item.key} 
+                            {filteredValores.map(item => (
+                                <ComboBoxItem
+                                    key={item.key}
+                                    data-key={item.key}
+                                    text={formatItemText(item.text || item.key, item.key)}
                                 />
-                            )}
+                            ))}
                         </ComboBox>
                     </div>
 
