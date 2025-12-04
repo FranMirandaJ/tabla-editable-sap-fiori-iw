@@ -67,6 +67,7 @@ const ModalEditGrupoET = ({ isModalOpen, handleCloseModal, setGrupoET, etiquetas
 
     return (
         <Dialog
+        draggable={true}
             stretch={false}
             open={isModalOpen}
             onAfterClose={handleCerrar}

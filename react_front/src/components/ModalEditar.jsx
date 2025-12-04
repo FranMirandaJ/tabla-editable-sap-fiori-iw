@@ -86,7 +86,9 @@ const ModalEditar = ({
 
             if (registroEditar.etiqueta) {
                 const valoresFiltrados = valoresCatalog.filter(v =>
-                    v.parentEtiqueta === registroEditar.etiqueta
+                    v.parentEtiqueta?.toString() === registroEditar.etiqueta?.toString() &&
+                    v.IDSOCIEDAD?.toString() === registroEditar.sociedad?.toString() &&
+                    v.IDCEDI?.toString() === registroEditar.sucursal?.toString()
                 );
                 setFilteredValoresCatalog(valoresFiltrados);
             }
@@ -425,7 +427,9 @@ const ModalEditar = ({
                                         setGrupoET("");
                                         // Filtrar Valores
                                         const filtered = valoresCatalog.filter(v =>
-                                            v.parentEtiqueta === selectedKey
+                                            v.parentEtiqueta?.toString() === selectedKey?.toString() &&
+                                            v.IDSOCIEDAD?.toString() === sociedad?.toString() &&
+                                            v.IDCEDI?.toString() === cedis?.toString()
                                         );
                                         console.log("Valores filtrados:", filtered);
                                         setFilteredValoresCatalog(filtered);

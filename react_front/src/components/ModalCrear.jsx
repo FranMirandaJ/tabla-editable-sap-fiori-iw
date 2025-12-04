@@ -91,14 +91,14 @@ const ModalCrear = ({
 
         // Aplicar filtro por colección
         if (filtros.coleccion && filtros.coleccion.length > 0) {
-            filtered = filtered.filter(etiqueta => 
+            filtered = filtered.filter(etiqueta =>
                 filtros.coleccion.includes(etiqueta.COLECCION)
             );
         }
 
         // Aplicar filtro por sección
         if (filtros.seccion && filtros.seccion.length > 0) {
-            filtered = filtered.filter(etiqueta => 
+            filtered = filtered.filter(etiqueta =>
                 filtros.seccion.includes(etiqueta.SECCION)
             );
         }
@@ -111,7 +111,7 @@ const ModalCrear = ({
         if (filteredEtiquetasCatalogOriginal.length > 0) {
             const etiquetasFiltradas = applyFilters(filteredEtiquetasCatalogOriginal, filters);
             setFilteredEtiquetasCatalog(etiquetasFiltradas);
-            
+
             // Si la etiqueta actualmente seleccionada no está en los resultados filtrados, limpiar la selección
             if (etiqueta && !etiquetasFiltradas.find(et => et.key === etiqueta)) {
                 setEtiqueta("");
@@ -361,16 +361,19 @@ const ModalCrear = ({
                                         // Limpiar selección dependiente
                                         setValor("");
                                         setGrupoET("");
-                                        // Filtrar Valores
+                                        // Filtrar Valores asegurando que coincidan Sociedad y CEDI
                                         const filtered = valoresCatalog.filter(v =>
-                                            v.parentEtiqueta === selectedKey
+                                            v.parentEtiqueta?.toString() === selectedKey?.toString() &&
+                                            v.IDSOCIEDAD?.toString() === sociedad?.toString() &&
+                                            v.IDCEDI?.toString() === cedis?.toString()
                                         );
+
                                         console.log("Valores filtrados:", filtered);
                                         setFilteredValoresCatalog(filtered);
                                     }}
                                     placeholder={
-                                        filteredEtiquetasCatalog.length === 0 
-                                            ? "No hay etiquetas disponibles" 
+                                        filteredEtiquetasCatalog.length === 0
+                                            ? "No hay etiquetas disponibles"
                                             : `Etiquetas (${filteredEtiquetasCatalog.length})`
                                     }
                                     filter="Contains"

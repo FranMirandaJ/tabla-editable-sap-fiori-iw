@@ -756,7 +756,9 @@ export default function App() {
       setFilteredEtiquetasCatalogOriginal(etiquetas); // GUARDAR EL FILTRO ORIGINAL
 
       const valores = valoresCatalog.filter(v =>
-        v.parentEtiqueta === rowData.etiqueta
+        v.parentEtiqueta?.toString() === rowData.etiqueta?.toString() &&
+        v.IDSOCIEDAD?.toString() === rowData.sociedad?.toString() &&
+        v.IDCEDI?.toString() === rowData.sucursal?.toString()
       );
       setFilteredValoresCatalog(valores);
 
@@ -1392,7 +1394,9 @@ export default function App() {
 
                               // Filtrar Valores
                               const filtered = valoresCatalog.filter(v =>
-                                v.parentEtiqueta?.toString() === selectedKey?.toString()
+                                v.parentEtiqueta?.toString() === selectedKey?.toString() &&
+                                v.IDSOCIEDAD?.toString() === editingRowData.sociedad?.toString() &&
+                                v.IDCEDI?.toString() === editingRowData.sucursal?.toString()
                               );
                               setFilteredValoresCatalog(filtered);
                             }}
