@@ -67,7 +67,7 @@ const ModalEditGrupoET = ({ isModalOpen, handleCloseModal, setGrupoET, etiquetas
 
     return (
         <Dialog
-        draggable={true}
+            draggable={true}
             stretch={false}
             open={isModalOpen}
             onAfterClose={handleCerrar}
@@ -126,7 +126,9 @@ const ModalEditGrupoET = ({ isModalOpen, handleCloseModal, setGrupoET, etiquetas
                                     setValor("");
                                     setValorInput("");
                                     const valoresFiltrados = valores.filter(v =>
-                                        v.parentEtiqueta === selectedKey
+                                        v.parentEtiqueta?.toString() === selectedKey?.toString() &&
+                                        v.IDSOCIEDAD?.toString() === sociedadSeleccionada?.toString() &&
+                                        v.IDCEDI?.toString() === cediSeleccionado?.toString()
                                     );
                                     setFilteredValores(valoresFiltrados);
                                 } else {
