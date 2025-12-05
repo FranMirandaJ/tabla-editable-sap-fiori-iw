@@ -5,26 +5,30 @@
         <!-- Grupo ET - Etiqueta -->
         <Label text="Grupo ET - Etiqueta" class="sapUiSmallMarginTop"/>
         <ComboBox
-          id="grpEtiqueta"
-          items="{grupoEtModel>/etiquetas}"
-          selectedKey="{grupoEtModel>/selectedEtiqueta}"
-          selectionChange=".onGrupoEtiquetaChange"
-          placeholder="Selecciona una Etiqueta">
-          <!-- key = IDETIQUETA, text = nombre de la etiqueta -->
-          <core:Item  key="{grupoEtModel>IDETIQUETA}"  text="{grupoEtModel>text}" />
+            id="grpEtiqueta"
+            items="{grupoEtModel>/etiquetas}"
+            selectedKey="{grupoEtModel>/selectedEtiqueta}"
+            selectionChange=".onGrupoEtiquetaChange"
+            placeholder="Selecciona una Etiqueta">
+            
+            <core:Item key="{grupoEtModel>IDETIQUETA}" 
+                      text="{grupoEtModel>text} ({grupoEtModel>IDETIQUETA})" />
+                      
         </ComboBox>
 
         <!-- Grupo ET - Valor -->
         <Label text="Grupo ET - Valor" class="sapUiMediumMarginTop"/>
         <ComboBox
-          id="grpEtValor"
-          items="{grupoEtModel>/valoresList}"
-          selectedKey="{grupoEtModel>/selectedValor}"
-          enabled="{= !!${grupoEtModel>/selectedEtiqueta} }"
-          selectionChange=".onGrupoValorChange"
-          placeholder="Selecciona un Valor">
-          <!-- key = IDVALOR, text = nombre del valor -->
-           <core:Item key="{grupoEtModel>IDVALOR}" text="{grupoEtModel>VALOR}" />
+            id="grpEtValor"
+            items="{grupoEtModel>/valoresList}"
+            selectedKey="{grupoEtModel>/selectedValor}"
+            enabled="{= ${grupoEtModel>/selectedEtiqueta} !== null }"
+            selectionChange=".onGrupoValorChange"
+            placeholder="Selecciona un Valor">
+            
+            <core:Item key="{grupoEtModel>IDVALOR}" 
+                      text="{grupoEtModel>VALOR} - ({grupoEtModel>IDVALOR})" />
+                      
         </ComboBox>
 
         <!-- Resultado -->
